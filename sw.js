@@ -1,6 +1,6 @@
 /* IronPath service worker — offline app shell + lazy image caching */
-const SHELL = 'ironpath-shell-v2';
-const IMG   = 'ironpath-img-v2';
+const SHELL = 'ironpath-shell-v3';
+const IMG   = 'ironpath-img-v3';
 const SHELL_FILES = [
   './', './index.html', './manifest.webmanifest', './icon.svg'
 ];

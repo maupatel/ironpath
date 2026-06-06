@@ -58,10 +58,12 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:.15s}
   .card:active{transform:scale(.985)}
   .demo{position:relative;width:100%;aspect-ratio:1/1;background:var(--card2);overflow:hidden}
-  .demo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .45s ease}
-  .demo .f1{opacity:0}
-  .card.anim .demo .f1{opacity:1}
-  .card.anim .demo .f0{opacity:0}
+  .demo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .35s ease}
+  /* two-frame demo loop: f0 = start, f1 = finish; body.flip alternates them in sync */
+  .demo .f0,.wk-demo .f0{opacity:1}
+  .demo .f1,.wk-demo .f1{opacity:0}
+  body.flip .demo .f1,body.flip .wk-demo .f1{opacity:1}
+  body.flip .demo .f0,body.flip .wk-demo .f0{opacity:0}
   .demo .badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:999px;text-transform:capitalize;letter-spacing:.3px}
   .card .meta{padding:10px 11px}
   .card .nm{font-weight:700;font-size:13.5px;line-height:1.25}
@@ -114,10 +116,7 @@
 
   /* workout do-along */
   .wk-demo{position:relative;width:100%;aspect-ratio:1/1;max-height:46vh;background:var(--card2);border-radius:18px;overflow:hidden;margin-bottom:14px}
-  .wk-demo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-  .wk-demo .f1{opacity:0;transition:opacity .45s}
-  .wk-demo.anim .f1{opacity:1}
-  .wk-demo.anim .f0{opacity:0;transition:opacity .45s}
+  .wk-demo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .35s ease}
   .setbtns{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
   .setbtn{flex:1;min-width:70px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:12px 6px;font-weight:700;cursor:pointer;text-align:center}
   .setbtn.done{background:var(--accent2);color:#04201a;border-color:var(--accent2)}
@@ -515,6 +514,9 @@ $('#installPill').onclick=async()=>{if(deferred){deferred.prompt();await deferre
   bar.lastChild.onclick=()=>{bar.remove();localStorage.setItem('ip_iosHint','1');};
   document.body.appendChild(bar);
 })();
+
+/* ---------- demo animation: alternate start/finish frames so the movement is visible ---------- */
+setInterval(()=>document.body.classList.toggle('flip'), 760);
 
 /* ---------- init ---------- */
 renderGroupChips();renderLib();buildPlan();updateLevelPill();
