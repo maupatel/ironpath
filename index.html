@@ -11,15 +11,27 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="description" content="A free, clean, ad-free gym do-along: upper/lower body plans, target areas, animated demos and proper technique." />
+<script>try{var _c=JSON.parse(localStorage.getItem('ironpath')||'{}');document.documentElement.setAttribute('data-theme',_c.theme||'auto');}catch(e){document.documentElement.setAttribute('data-theme','auto');}</script>
 <style>
-  :root{
+  :root{   /* default = dark */
     --bg:#0f1115; --bg2:#171a21; --card:#1c2029; --card2:#232834;
     --line:#2b313d; --text:#e9edf4; --muted:#9aa4b2; --accent:#4f8cff;
     --accent2:#22c98a; --warn:#ffb020; --danger:#ff5c5c; --radius:16px;
+    --headbg:rgba(15,17,21,.82); --navbg:rgba(15,17,21,.92);
   }
+  /* shared light palette */
+  html[data-theme="light"]{
+    --bg:#f4f6fa; --bg2:#fff; --card:#fff; --card2:#eef2f8;
+    --line:#e2e7ef; --text:#161a20; --muted:#5a6472; --accent:#2f6bff;
+    --headbg:rgba(255,255,255,.85); --navbg:rgba(255,255,255,.94);
+  }
+  /* auto = follow the device when system is light */
   @media (prefers-color-scheme: light){
-    :root{ --bg:#f4f6fa; --bg2:#fff; --card:#fff; --card2:#f0f3f8;
-      --line:#e2e7ef; --text:#161a20; --muted:#5a6472; --accent:#2f6bff; }
+    html[data-theme="auto"]{
+      --bg:#f4f6fa; --bg2:#fff; --card:#fff; --card2:#eef2f8;
+      --line:#e2e7ef; --text:#161a20; --muted:#5a6472; --accent:#2f6bff;
+      --headbg:rgba(255,255,255,.85); --navbg:rgba(255,255,255,.94);
+    }
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -30,11 +42,10 @@
   }
   a{color:var(--accent)}
   header{
-    position:sticky; top:0; z-index:20; background:rgba(15,17,21,.82);
+    position:sticky; top:0; z-index:20; background:var(--headbg);
     backdrop-filter:blur(12px); border-bottom:1px solid var(--line);
     padding:env(safe-area-inset-top) 0 0;
   }
-  @media (prefers-color-scheme: light){header{background:rgba(255,255,255,.85)}}
   .head-row{display:flex;align-items:center;gap:10px;padding:12px 16px}
   .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:18px;letter-spacing:-.3px}
   .logo .mark{width:26px;height:26px}
@@ -104,8 +115,10 @@
   .rangeval{float:right;color:var(--accent);font-weight:700}
 
   /* bottom nav */
-  nav.tab{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(15,17,21,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
-  @media (prefers-color-scheme: light){nav.tab{background:rgba(255,255,255,.94)}}
+  nav.tab{position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--navbg);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+  .pill.tap{cursor:pointer;user-select:none}
+  .pill.tap:active{transform:scale(.94)}
+  .pill.lvl{border-color:var(--accent);color:var(--accent)}
   nav.tab button{flex:1;background:none;border:0;color:var(--muted);font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer}
   nav.tab button.on{color:var(--accent)}
   nav.tab svg{width:23px;height:23px}
@@ -140,7 +153,8 @@
     </div>
     <div class="spacer"></div>
     <span class="pill" id="installPill" style="display:none;cursor:pointer">⤓ Install</span>
-    <span class="pill" id="levelPill">Beginner</span>
+    <span class="pill tap" id="themePill" title="Theme">🌗 Auto</span>
+    <span class="pill tap lvl" id="levelPill" title="Tap to switch level">Beginner</span>
   </div>
 </header>
 
@@ -180,13 +194,22 @@
 
   <!-- ============ WORKOUT ============ -->
   <section class="view" id="v-workout">
-    <div id="wkLive">
+    <div id="wkReady">
+      <h2>Ready to train?</h2>
+      <div class="sub" id="wkReadySub"></div>
+      <div id="wkReadyList"></div>
+      <button class="btn green block" id="btnReadyStart" style="margin-top:6px">▶ Start workout</button>
+      <button class="btn ghost block" id="btnReadyEdit" style="margin-top:10px">⚙︎ Change focus / level / equipment</button>
+      <small class="lic">Warm up 5 min first. Stop if you feel sharp pain. General guidance, not medical advice.</small>
+    </div>
+    <div id="wkLive" style="display:none">
       <div class="progress"><span id="wkBar"></span></div>
       <div class="muted" id="wkCount" style="font-size:13px;margin-bottom:6px"></div>
       <h2 id="wkName" style="margin-top:0"></h2>
       <div class="wk-demo anim" id="wkDemo"></div>
       <div class="tags" id="wkTags"></div>
       <div class="pi-sub" id="wkScheme" style="font-size:15px;font-weight:700;color:var(--accent)"></div>
+      <div class="note" id="wkWeight" style="border-left-color:var(--accent2);margin:10px 0"></div>
       <div class="setbtns" id="wkSets"></div>
       <button class="btn ghost block" id="btnRest">⏱ Rest <span id="restLen"></span></button>
       <button class="btn ghost block" id="btnHow" style="margin-top:10px">▤ How to do it</button>
@@ -293,10 +316,11 @@ EXERCISES.forEach(e=>{ e.lvl = e.level==='expert' ? 'intermediate' : e.level; })
 
 /* ---------- state ---------- */
 const LS='ironpath';
-let cfg=Object.assign({focus:'upper',level:'beginner',goal:'hypertrophy',dur:45,
+let cfg=Object.assign({focus:'upper',level:'beginner',goal:'hypertrophy',dur:45,theme:'auto',
   equipment:['barbell','dumbbell','body only','cable','machine','kettlebells','e-z curl bar']},
   JSON.parse(localStorage.getItem(LS)||'{}'));
-let plan=[]; let wkIndex=0; let wkState={};
+if(!Array.isArray(cfg.equipment)||!cfg.equipment.length) cfg.equipment=['barbell','dumbbell','body only','cable','machine','kettlebells','e-z curl bar'];
+let plan=[]; let wkIndex=0; let wkState={}; let wkActive=false;
 const EQUIP=['barbell','dumbbell','body only','cable','machine','kettlebells','e-z curl bar'];
 const ORDER={upper:['Chest','Back','Shoulders','Biceps','Triceps'],
   lower:['Quads','Hamstrings','Glutes','Calves'],
@@ -324,10 +348,12 @@ function renderLib(){
   const grid=$('#libGrid');
   let list=EXERCISES.filter(e=>curRegion==='all'||e.region===curRegion);
   if(curGroup!=='all') list=list.filter(e=>e.group===curGroup);
-  grid.innerHTML=list.map((e,i)=>{
+  if(cfg.level==='beginner') list=list.filter(e=>e.lvl==='beginner');
+  if(!list.length){grid.innerHTML=`<div class="empty">No ${cfg.level} exercises here.<br>Tap the level pill (top right) to see more.</div>`;return;}
+  grid.innerHTML=list.map(e=>{
     const[a,b]=imgs(e);
-    return `<div class="card anim" data-id="${e.id}" style="animation-delay:${i*15}ms">
-      <div class="demo"><img class="f0" loading="lazy" src="${a}" alt=""><img class="f1" loading="lazy" src="${b}" alt="">
+    return `<div class="card" data-id="${e.id}">
+      <div class="demo"><img class="f0" loading="lazy" src="${a}" alt="" onerror="this.src='${b}'"><img class="f1" loading="lazy" src="${b}" alt="" onerror="this.src='${a}'">
       <span class="badge">${e.lvl}</span></div>
       <div class="meta"><div class="nm">${e.name}</div><div class="tg">${e.primary.join(', ')}</div></div></div>`;
   }).join('');
@@ -339,17 +365,40 @@ $('#groupChips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;
   curGroup=c.dataset.g;renderGroupChips();renderLib();};
 $('#libGrid').onclick=e=>{const c=e.target.closest('.card');if(c)openDetail(c.dataset.id);};
 
+/* ---------- WEIGHT SUGGESTIONS ---------- */
+function weightTip(e){
+  const lv=cfg.level, comp=e.mechanic==='compound';
+  if(e.equipment==='body only'){
+    const hard=['Pullups','Dips_-_Triceps_Version','Hanging_Leg_Raise'];
+    if(hard.includes(e.id)) return 'Bodyweight. Too hard? Use the assisted machine or a band, or do slow negatives. Too easy? Add a weight belt.';
+    return 'Bodyweight. Too easy? Slow the lowering to 3–4 sec, add reps, or pause at the bottom.';
+  }
+  if(e.equipment==='barbell') return lv==='beginner'
+    ? 'Start with the empty bar (45 lb / 20 kg). Add 5–10 lb only when every set feels easy with clean form.'
+    : 'Load so the last set leaves 1–2 clean reps in the tank. Add 5–10 lb when you hit the top of the rep range.';
+  if(e.equipment==='dumbbell') return lv==='beginner'
+    ? (comp?'Try 15–25 lb each hand. ':'Try 8–15 lb each hand. ')+'Last 2 reps should be hard but clean.'
+    : (comp?'Try 30–50 lb each hand. ':'Try 15–25 lb each hand. ')+'Leave 1–2 reps in reserve, then go up 5 lb.';
+  if(e.equipment==='kettlebells') return lv==='beginner'
+    ? 'Try a 26–35 lb (12–16 kg) kettlebell.' : 'Try 35–53 lb (16–24 kg); size up when reps feel easy.';
+  if(e.equipment==='e-z curl bar') return lv==='beginner'
+    ? 'Start with just the bar (~15–25 lb) plus light plates.' : 'Add plates so the last 2 reps are tough; bump 5 lb when easy.';
+  /* cable / machine */
+  return 'Do one light feel-out set, then pick the stack weight where the last 2 reps are genuinely hard but form holds. Move the pin up one plate when it gets easy.';
+}
+
 /* ---------- DETAIL SHEET ---------- */
 function openDetail(id){
-  const e=EXERCISES.find(x=>x.id===id);const[a,b]=imgs(e);
+  const e=EXERCISES.find(x=>x.id===id);if(!e)return;const[a,b]=imgs(e);
   $('#detailSheet').innerHTML=`<div class="grip"></div>
-    <div class="wk-demo anim" style="max-height:38vh"><img class="f0" src="${a}"><img class="f1" src="${b}"></div>
+    <div class="wk-demo" style="max-height:38vh"><img class="f0" src="${a}" onerror="this.src='${b}'"><img class="f1" src="${b}" onerror="this.src='${a}'"></div>
     <h3>${e.name}</h3>
     <div class="muted" style="font-size:13px;text-transform:capitalize">${e.equipment} · ${e.lvl} · ${e.mechanic}</div>
     <div class="tags">
       ${e.primary.map(m=>`<span class="tag prim">🎯 ${m}</span>`).join('')}
       ${e.secondary.map(m=>`<span class="tag">${m}</span>`).join('')}
     </div>
+    <div class="note" style="border-left-color:var(--accent2)"><b>🏋️ Suggested weight (${cfg.level}):</b> ${weightTip(e)}</div>
     <ol class="steps">${e.steps.map(s=>`<li>${s}</li>`).join('')}</ol>`;
   openSheet('#detailBg');
 }
@@ -425,43 +474,72 @@ $('#optEquip').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;
 $$('#optBg [data-preset]').forEach(b=>b.onclick=()=>{
   cfg.equipment = b.dataset.preset==='all'?[...EQUIP]
     : b.dataset.preset==='home'?['dumbbell','body only']:['body only'];paintOpt();});
-$('#optApply').onclick=()=>{save();updateLevelPill();buildPlan();closeSheet('#optBg');go('plan');};
+$('#optApply').onclick=()=>{save();updateLevelPill();renderLib();buildPlan();wkActive=false;closeSheet('#optBg');go('plan');};
 
-/* ---------- WORKOUT DO-ALONG ---------- */
+/* ---------- WORKOUT DO-ALONG (Ready → Live → Done) ---------- */
+function showWk(which){ // 'ready' | 'live' | 'done'
+  $('#wkReady').style.display = which==='ready'?'block':'none';
+  $('#wkLive').style.display  = which==='live' ?'block':'none';
+  $('#wkDone').style.display  = which==='done' ?'block':'none';
+}
+function refreshWorkoutView(){           // called whenever the Workout tab is shown
+  if(wkActive && plan.length && plan[wkIndex]){ showWk('live'); renderWk(); }
+  else { wkActive=false; renderReady(); showWk('ready'); }
+}
+function renderReady(){
+  if(!plan.length){
+    $('#wkReadySub').textContent='No exercises match your current equipment & level.';
+    $('#wkReadyList').innerHTML='<div class="empty">Tap “Change focus / level / equipment” below to build a plan.</div>';
+    return;
+  }
+  const sc=SCHEMES[cfg.goal];
+  $('#wkReadySub').textContent=`${cap(cfg.focus)} · ${cap(cfg.goal)} · ${cfg.level} · ${plan.length} exercises · ~${cfg.dur} min`;
+  $('#wkReadyList').innerHTML=plan.map(e=>{const[a,b]=imgs(e);
+    return `<div class="plan-item" data-id="${e.id}"><img class="thumb" loading="lazy" src="${a}" onerror="this.src='${b}'">
+      <div class="pi-main"><div class="pi-name">${e.name}</div>
+        <div class="pi-sub" style="text-transform:capitalize">${e.group} · ${e.primary.join(', ')}</div></div>
+      <div class="pi-sets">${e.sets}×${e.reps}</div></div>`;}).join('');
+}
 function startWorkout(){
-  wkIndex=0; wkState={};
+  if(!plan.length){paintOpt();openSheet('#optBg');return;}
+  wkActive=true; wkIndex=0; wkState={};
   plan.forEach((e,i)=>wkState[i]=new Array(e.sets).fill(false));
-  $('#wkLive').style.display='block'; $('#wkDone').style.display='none';
-  go('workout'); renderWk();
+  go('workout');                          // go() will call refreshWorkoutView → live
 }
 function renderWk(){
+  if(!plan.length||!plan[wkIndex]){ wkActive=false; refreshWorkoutView(); return; }
+  if(!wkState[wkIndex]) wkState[wkIndex]=new Array(plan[wkIndex].sets).fill(false);
   const e=plan[wkIndex];const[a,b]=imgs(e);
   $('#wkCount').textContent=`Exercise ${wkIndex+1} of ${plan.length} · ${e.group}`;
-  $('#wkBar').style.width=((wkIndex)/plan.length*100)+'%';
+  $('#wkBar').style.width=(wkIndex/plan.length*100)+'%';
   $('#wkName').textContent=e.name;
-  $('#wkDemo').innerHTML=`<img class="f0" src="${a}"><img class="f1" src="${b}">`;
+  $('#wkDemo').innerHTML=`<img class="f0" src="${a}" onerror="this.src='${b}'"><img class="f1" src="${b}" onerror="this.src='${a}'">`;
   $('#wkTags').innerHTML=e.primary.map(m=>`<span class="tag prim">🎯 ${m}</span>`).join('')
     +e.secondary.slice(0,3).map(m=>`<span class="tag">${m}</span>`).join('');
   $('#wkScheme').textContent=`${e.sets} sets × ${e.reps} reps · ${e.rest}s rest`;
+  $('#wkWeight').innerHTML=`🏋️ ${weightTip(e)}`;
   $('#restLen').textContent=e.rest+'s';
   $('#wkSets').innerHTML=wkState[wkIndex].map((d,i)=>
     `<button class="setbtn ${d?'done':''}" data-set="${i}">Set ${i+1}${d?' ✓':''}</button>`).join('');
   $('#btnNext').textContent = wkIndex===plan.length-1 ? 'Finish ✓' : 'Next ›';
 }
-$('#wkSets').onclick=e=>{const b=e.target.closest('.setbtn');if(!b)return;
+$('#wkReadyList').onclick=e=>{const it=e.target.closest('.plan-item');if(it)openDetail(it.dataset.id);};
+$('#btnReadyStart').onclick=startWorkout;
+$('#btnReadyEdit').onclick=()=>{paintOpt();openSheet('#optBg');};
+$('#wkSets').onclick=e=>{const b=e.target.closest('.setbtn');if(!b||!plan[wkIndex])return;
   const i=+b.dataset.set; wkState[wkIndex][i]=!wkState[wkIndex][i];
-  renderWk(); if(wkState[wkIndex][i]) openRest(plan[wkIndex].rest);};
-$('#btnHow').onclick=()=>openDetail(plan[wkIndex].id);
+  renderWk(); if(wkState[wkIndex][i] && wkIndex<plan.length) openRest(plan[wkIndex].rest);};
+$('#btnHow').onclick=()=>{if(plan[wkIndex])openDetail(plan[wkIndex].id);};
 $('#btnPrev').onclick=()=>{if(wkIndex>0){wkIndex--;renderWk();}};
 $('#btnNext').onclick=()=>{if(wkIndex<plan.length-1){wkIndex++;renderWk();}else finishWk();};
-$('#btnRest').onclick=()=>openRest(plan[wkIndex].rest);
+$('#btnRest').onclick=()=>{if(plan[wkIndex])openRest(plan[wkIndex].rest);};
 function finishWk(){
   $('#wkBar').style.width='100%';
   const sets=Object.values(wkState).reduce((n,a)=>n+a.filter(Boolean).length,0);
   $('#doneSummary').textContent=`${plan.length} exercises · ${sets} sets logged. Nice work — recover well.`;
-  $('#wkLive').style.display='none'; $('#wkDone').style.display='block';
+  wkActive=false; showWk('done');
 }
-$('#btnFinish').onclick=()=>go('plan');
+$('#btnFinish').onclick=()=>{ go('plan'); };
 
 /* ---------- REST TIMER ---------- */
 let restT=null, restLeft=0;
@@ -490,13 +568,34 @@ function openSheet(id){$(id).classList.add('open');}
 function closeSheet(id){$(id).classList.remove('open');}
 $$('.sheet-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');}));
 function go(v){
-  $$('.view').forEach(x=>x.classList.remove('on'));$('#v-'+v).classList.add('on');
+  const sec=$('#v-'+v); if(!sec) return;
+  $$('.view').forEach(x=>x.classList.remove('on')); sec.classList.add('on');
   $$('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  if(v==='workout') refreshWorkoutView();
+  if(v==='plan') renderPlan();
   window.scrollTo(0,0);
 }
 $('#tabs').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v);};
-function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function cap(s){return (s||'').charAt(0).toUpperCase()+(s||'').slice(1);}
 function updateLevelPill(){$('#levelPill').textContent=cap(cfg.level);}
+
+/* ---------- level toggle (header pill) ---------- */
+$('#levelPill').onclick=()=>{
+  cfg.level = cfg.level==='beginner' ? 'intermediate' : 'beginner';
+  save(); updateLevelPill(); renderLib(); buildPlan();
+  if($('#v-workout').classList.contains('on')) refreshWorkoutView();
+};
+
+/* ---------- theme toggle (Auto → Light → Dark) ---------- */
+const THEMES=['auto','light','dark'], TLABEL={auto:'🌗 Auto',light:'☀️ Light',dark:'🌙 Dark'};
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme',cfg.theme||'auto');
+  $('#themePill').textContent=TLABEL[cfg.theme||'auto'];
+  const dark = cfg.theme==='dark' || (cfg.theme!=='light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  const m=document.querySelector('meta[name=theme-color]'); if(m) m.content = dark ? '#0f1115' : '#f4f6fa';
+}
+$('#themePill').onclick=()=>{const i=THEMES.indexOf(cfg.theme||'auto');cfg.theme=THEMES[(i+1)%3];save();applyTheme();};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if((cfg.theme||'auto')==='auto')applyTheme();});
 
 /* ---------- install prompt (Android/Chrome) ---------- */
 let deferred=null;
@@ -515,11 +614,16 @@ $('#installPill').onclick=async()=>{if(deferred){deferred.prompt();await deferre
   document.body.appendChild(bar);
 })();
 
-/* ---------- demo animation: alternate start/finish frames so the movement is visible ---------- */
-setInterval(()=>document.body.classList.toggle('flip'), 760);
+/* ---------- demo animation: alternate frames; pause when hidden; respect reduced-motion ---------- */
+let _flip=null;
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function startFlip(){ if(_flip||reduceMotion)return; _flip=setInterval(()=>document.body.classList.toggle('flip'),760); }
+function stopFlip(){ if(_flip){clearInterval(_flip);_flip=null;} document.body.classList.remove('flip'); }
+document.addEventListener('visibilitychange',()=>{document.hidden?stopFlip():startFlip();});
+startFlip();
 
 /* ---------- init ---------- */
-renderGroupChips();renderLib();buildPlan();updateLevelPill();
+applyTheme();renderGroupChips();renderLib();buildPlan();updateLevelPill();renderReady();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>

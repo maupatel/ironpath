@@ -1,9 +1,10 @@
-/* IronPath service worker — offline app shell + lazy image caching */
-const SHELL = 'ironpath-shell-v3';
-const IMG   = 'ironpath-img-v3';
-const SHELL_FILES = [
-  './', './index.html', './manifest.webmanifest', './icon.svg'
-];
+/* IronPath service worker
+   - App shell (HTML/JS/manifest): NETWORK-FIRST so updates always show when online,
+     falling back to cache when offline. Fixes "app not refreshing / glitchy".
+   - Exercise images: CACHE-FIRST (they never change), only caching successful responses. */
+const SHELL = 'ironpath-shell-v4';
+const IMG   = 'ironpath-img-v4';
+const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -18,29 +19,40 @@ self.addEventListener('activate', e => {
   );
 });
 
+const isImage = url => /\/exercises\/|\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url);
+
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  const url = new URL(req.url);
 
-  // Exercise demo images (jsdelivr): cache-first, store after first view → works offline next time.
-  if (req.url.includes('cdn.jsdelivr.net')) {
+  // only handle same-origin (let anything external pass straight through)
+  if (url.origin !== self.location.origin) return;
+
+  // Images: cache-first, store only good responses.
+  if (isImage(url.pathname)) {
     e.respondWith(
       caches.open(IMG).then(async cache => {
         const hit = await cache.match(req);
         if (hit) return hit;
-        try { const res = await fetch(req); cache.put(req, res.clone()); return res; }
-        catch { return hit || Response.error(); }
+        try {
+          const res = await fetch(req);
+          if (res && res.ok) cache.put(req, res.clone());
+          return res;
+        } catch { return hit || Response.error(); }
       })
     );
     return;
   }
 
-  // App shell: cache-first, fall back to network.
+  // App shell / everything else: network-first, fall back to cache (offline).
   e.respondWith(
-    caches.match(req).then(hit => hit || fetch(req).then(res => {
-      const copy = res.clone();
-      caches.open(SHELL).then(c => c.put(req, copy)).catch(()=>{});
+    fetch(req).then(res => {
+      if (res && res.ok) {
+        const copy = res.clone();
+        caches.open(SHELL).then(c => c.put(req, copy)).catch(()=>{});
+      }
       return res;
-    }).catch(() => caches.match('./index.html')))
+    }).catch(() => caches.match(req).then(hit => hit || caches.match('./index.html')))
   );
 });
