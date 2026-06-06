@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f1115" />
+<title>IronPath — Gym Do-Along</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="description" content="A free, clean, ad-free gym do-along: upper/lower body plans, target areas, animated demos and proper technique." />
+<style>
+  :root{
+    --bg:#0f1115; --bg2:#171a21; --card:#1c2029; --card2:#232834;
+    --line:#2b313d; --text:#e9edf4; --muted:#9aa4b2; --accent:#4f8cff;
+    --accent2:#22c98a; --warn:#ffb020; --danger:#ff5c5c; --radius:16px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f4f6fa; --bg2:#fff; --card:#fff; --card2:#f0f3f8;
+      --line:#e2e7ef; --text:#161a20; --muted:#5a6472; --accent:#2f6bff; }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased;
+    padding-bottom:84px; line-height:1.45;
+  }
+  a{color:var(--accent)}
+  header{
+    position:sticky; top:0; z-index:20; background:rgba(15,17,21,.82);
+    backdrop-filter:blur(12px); border-bottom:1px solid var(--line);
+    padding:env(safe-area-inset-top) 0 0;
+  }
+  @media (prefers-color-scheme: light){header{background:rgba(255,255,255,.85)}}
+  .head-row{display:flex;align-items:center;gap:10px;padding:12px 16px}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:18px;letter-spacing:-.3px}
+  .logo .mark{width:26px;height:26px}
+  .spacer{flex:1}
+  .pill{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:999px}
+  main{max-width:760px;margin:0 auto;padding:16px}
+  h2{font-size:20px;margin:6px 0 14px;letter-spacing:-.3px}
+  .sub{color:var(--muted);font-size:13px;margin:-8px 0 16px}
+
+  /* segmented control */
+  .seg{display:flex;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+  .seg button{flex:1;border:0;background:transparent;color:var(--muted);padding:9px 8px;border-radius:9px;font-weight:600;font-size:14px;cursor:pointer;transition:.15s}
+  .seg button.on{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(79,140,255,.35)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+  .row.tight{margin:10px 0}
+
+  .chip{border:1px solid var(--line);background:var(--card);color:var(--text);padding:7px 12px;border-radius:999px;font-size:13px;cursor:pointer;font-weight:600}
+  .chip.on{border-color:var(--accent);color:var(--accent);background:rgba(79,140,255,.10)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:.15s}
+  .card:active{transform:scale(.985)}
+  .demo{position:relative;width:100%;aspect-ratio:1/1;background:var(--card2);overflow:hidden}
+  .demo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .45s ease}
+  .demo .f1{opacity:0}
+  .card.anim .demo .f1{opacity:1}
+  .card.anim .demo .f0{opacity:0}
+  .demo .badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:999px;text-transform:capitalize;letter-spacing:.3px}
+  .card .meta{padding:10px 11px}
+  .card .nm{font-weight:700;font-size:13.5px;line-height:1.25}
+  .card .tg{color:var(--muted);font-size:11.5px;margin-top:3px;text-transform:capitalize}
+
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:13px 16px;font-weight:700;font-size:15px;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.green{background:var(--accent2);color:#04201a}
+  .btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--line)}
+  .btn.block{width:100%}
+  .btn:active{filter:brightness(.95)}
+
+  /* plan list */
+  .plan-item{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:10px}
+  .plan-item .thumb{width:64px;height:64px;border-radius:10px;object-fit:cover;background:var(--card2);flex:none}
+  .plan-item .pi-main{flex:1;min-width:0}
+  .plan-item .pi-name{font-weight:700;font-size:14.5px}
+  .plan-item .pi-sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .pi-sets{font-weight:800;font-size:14px;color:var(--accent);white-space:nowrap}
+
+  /* modal / sheet */
+  .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:none;align-items:flex-end;justify-content:center}
+  .sheet-bg.open{display:flex}
+  .sheet{background:var(--bg2);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;border:1px solid var(--line);padding:18px 18px calc(28px + env(safe-area-inset-bottom));animation:up .25s ease}
+  @keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+  .sheet h3{margin:2px 0 4px;font-size:19px}
+  .grip{width:40px;height:4px;background:var(--line);border-radius:999px;margin:0 auto 14px}
+  .field{margin:14px 0}
+  .field label{display:block;font-size:13px;color:var(--muted);font-weight:600;margin-bottom:7px}
+  .steps{counter-reset:s;padding:0;margin:8px 0 0;list-style:none}
+  .steps li{position:relative;padding:8px 0 8px 34px;border-top:1px solid var(--line);font-size:14px}
+  .steps li:before{counter-increment:s;content:counter(s);position:absolute;left:0;top:8px;width:22px;height:22px;background:var(--accent);color:#fff;border-radius:50%;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+  .tag{font-size:11.5px;background:var(--card2);border:1px solid var(--line);padding:4px 9px;border-radius:999px;text-transform:capitalize;color:var(--muted)}
+  .tag.prim{color:var(--accent2);border-color:var(--accent2)}
+  input[type=range]{width:100%}
+  .rangeval{float:right;color:var(--accent);font-weight:700}
+
+  /* bottom nav */
+  nav.tab{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(15,17,21,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+  @media (prefers-color-scheme: light){nav.tab{background:rgba(255,255,255,.94)}}
+  nav.tab button{flex:1;background:none;border:0;color:var(--muted);font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer}
+  nav.tab button.on{color:var(--accent)}
+  nav.tab svg{width:23px;height:23px}
+
+  .view{display:none}
+  .view.on{display:block;animation:fade .2s}
+  @keyframes fade{from{opacity:.4}to{opacity:1}}
+
+  /* workout do-along */
+  .wk-demo{position:relative;width:100%;aspect-ratio:1/1;max-height:46vh;background:var(--card2);border-radius:18px;overflow:hidden;margin-bottom:14px}
+  .wk-demo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .wk-demo .f1{opacity:0;transition:opacity .45s}
+  .wk-demo.anim .f1{opacity:1}
+  .wk-demo.anim .f0{opacity:0;transition:opacity .45s}
+  .setbtns{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+  .setbtn{flex:1;min-width:70px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:12px 6px;font-weight:700;cursor:pointer;text-align:center}
+  .setbtn.done{background:var(--accent2);color:#04201a;border-color:var(--accent2)}
+  .timer{font-variant-numeric:tabular-nums;font-size:54px;font-weight:800;text-align:center;letter-spacing:-1px}
+  .progress{height:6px;background:var(--card2);border-radius:999px;overflow:hidden;margin:6px 0 16px}
+  .progress>span{display:block;height:100%;background:var(--accent);transition:width .3s}
+  .wk-nav{display:flex;gap:10px;margin-top:16px}
+  .note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--muted);margin:14px 0}
+  .empty{text-align:center;color:var(--muted);padding:40px 10px;font-size:14px}
+  .center{text-align:center}
+  .muted{color:var(--muted)}
+  small.lic{display:block;color:var(--muted);font-size:11px;margin-top:24px;text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-row">
+    <div class="logo">
+      <svg class="mark" viewBox="0 0 24 24" fill="none"><rect x="1" y="9" width="3" height="6" rx="1" fill="#4f8cff"/><rect x="20" y="9" width="3" height="6" rx="1" fill="#4f8cff"/><rect x="4" y="10.5" width="2" height="3" rx="1" fill="#22c98a"/><rect x="18" y="10.5" width="2" height="3" rx="1" fill="#22c98a"/><rect x="6" y="11" width="12" height="2" rx="1" fill="currentColor"/></svg>
+      IronPath
+    </div>
+    <div class="spacer"></div>
+    <span class="pill" id="installPill" style="display:none;cursor:pointer">⤓ Install</span>
+    <span class="pill" id="levelPill">Beginner</span>
+  </div>
+</header>
+
+<main>
+  <!-- ============ BROWSE ============ -->
+  <section class="view on" id="v-browse">
+    <h2>Exercise Library</h2>
+    <div class="sub">Tap any exercise for animated demo, target area and step-by-step technique.</div>
+
+    <div class="seg" id="regionSeg">
+      <button data-r="all" class="on">All</button>
+      <button data-r="upper">Upper</button>
+      <button data-r="lower">Lower</button>
+      <button data-r="core">Core</button>
+    </div>
+
+    <div class="row tight" id="groupChips"></div>
+    <div class="grid" id="libGrid"></div>
+  </section>
+
+  <!-- ============ PLAN ============ -->
+  <section class="view" id="v-plan">
+    <h2>Your Plan</h2>
+    <div class="sub" id="planSub">A balanced session built from your settings. Tap Optimize to tailor it.</div>
+
+    <div class="row tight">
+      <button class="btn ghost" id="btnOptimize">⚙︎ Optimize</button>
+      <button class="btn ghost" id="btnRegen">↻ Shuffle</button>
+    </div>
+
+    <div id="planList"></div>
+
+    <div class="note" id="planMeta"></div>
+    <button class="btn green block" id="btnStart">▶ Start Do-Along Workout</button>
+    <small class="lic">Always warm up first. Stop if you feel pain. This app is general guidance, not medical advice.</small>
+  </section>
+
+  <!-- ============ WORKOUT ============ -->
+  <section class="view" id="v-workout">
+    <div id="wkLive">
+      <div class="progress"><span id="wkBar"></span></div>
+      <div class="muted" id="wkCount" style="font-size:13px;margin-bottom:6px"></div>
+      <h2 id="wkName" style="margin-top:0"></h2>
+      <div class="wk-demo anim" id="wkDemo"></div>
+      <div class="tags" id="wkTags"></div>
+      <div class="pi-sub" id="wkScheme" style="font-size:15px;font-weight:700;color:var(--accent)"></div>
+      <div class="setbtns" id="wkSets"></div>
+      <button class="btn ghost block" id="btnRest">⏱ Rest <span id="restLen"></span></button>
+      <button class="btn ghost block" id="btnHow" style="margin-top:10px">▤ How to do it</button>
+      <div class="wk-nav">
+        <button class="btn ghost" id="btnPrev" style="flex:1">‹ Prev</button>
+        <button class="btn primary" id="btnNext" style="flex:2">Next ›</button>
+      </div>
+    </div>
+    <div id="wkDone" style="display:none" class="center">
+      <div style="font-size:64px;margin:30px 0 6px">🏆</div>
+      <h2>Workout complete!</h2>
+      <p class="muted" id="doneSummary"></p>
+      <button class="btn green block" id="btnFinish">Done</button>
+    </div>
+  </section>
+</main>
+
+<!-- rest timer overlay -->
+<div class="sheet-bg" id="restBg">
+  <div class="sheet center" style="border-radius:20px;max-width:340px;margin:auto 16px;align-self:center">
+    <div class="muted" style="font-weight:700;letter-spacing:1px;text-transform:uppercase;font-size:12px">Rest</div>
+    <div class="timer" id="restClock">0:00</div>
+    <div class="row" style="justify-content:center">
+      <button class="chip" data-adj="-15">−15s</button>
+      <button class="chip" data-adj="15">+15s</button>
+    </div>
+    <button class="btn primary block" id="restSkip" style="margin-top:14px">Skip rest</button>
+  </div>
+</div>
+
+<!-- exercise detail sheet -->
+<div class="sheet-bg" id="detailBg">
+  <div class="sheet" id="detailSheet"><div class="grip"></div></div>
+</div>
+
+<!-- optimize sheet -->
+<div class="sheet-bg" id="optBg">
+  <div class="sheet">
+    <div class="grip"></div>
+    <h3>Optimize your plan</h3>
+    <p class="muted" style="margin-top:0;font-size:13px">Tune the plan to your goal, gear and time. Saved on this device.</p>
+
+    <div class="field">
+      <label>Focus</label>
+      <div class="seg" id="optFocus">
+        <button data-v="upper">Upper</button>
+        <button data-v="lower">Lower</button>
+        <button data-v="full">Full body</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Experience</label>
+      <div class="seg" id="optLevel">
+        <button data-v="beginner">Beginner</button>
+        <button data-v="intermediate">Intermediate</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Goal</label>
+      <div class="seg" id="optGoal">
+        <button data-v="strength">Strength</button>
+        <button data-v="hypertrophy">Muscle</button>
+        <button data-v="endurance">Endurance</button>
+        <button data-v="fatloss">Fat loss</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Session length <span class="rangeval" id="durVal">45 min</span></label>
+      <input type="range" id="optDur" min="20" max="90" step="5" value="45" />
+    </div>
+    <div class="field">
+      <label>Equipment available</label>
+      <div class="row tight" style="margin-bottom:8px">
+        <button class="chip" data-preset="all">Full gym</button>
+        <button class="chip" data-preset="home">Home (DB+body)</button>
+        <button class="chip" data-preset="body">Bodyweight</button>
+      </div>
+      <div class="row tight" id="optEquip"></div>
+    </div>
+    <button class="btn primary block" id="optApply">Apply &amp; build plan</button>
+  </div>
+</div>
+
+<nav class="tab" id="tabs">
+  <button data-v="browse" class="on">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    Library
+  </button>
+  <button data-v="plan">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Plan
+  </button>
+  <button data-v="workout">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5l11 11M21 21l-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 18l3 3 3-3-3-3zM18 9l3-3-3-3-3 3z"/></svg>
+    Workout
+  </button>
+</nav>
+
+<script>
+/* ---------- exercise data (public-domain Free Exercise DB) ---------- */
+const CDN="exercises/";  /* images bundled in-repo: no third-party CDN (works behind corporate proxies & offline) */
+const EXERCISES=[{"id":"Barbell_Bench_Press_-_Medium_Grip","name":"Barbell Bench Press - Medium Grip","region":"upper","group":"Chest","level":"beginner","equipment":"barbell","primary":["chest"],"secondary":["shoulders","triceps"],"mechanic":"compound","steps":["Lie back on a flat bench. Using a medium width grip (a grip that creates a 90-degree angle in the middle of the movement between the forearms and the upper arms), lift the bar from the rack and hold it straight over you with your arms locked. This will be your starting position.","From the starting position, breathe in and begin coming down slowly until the bar touches your middle chest.","After a brief pause, push the bar back to the starting position as you breathe out. Focus on pushing the bar using your chest muscles. Lock your arms and squeeze your chest in the contracted position at the top of the motion, hold for a second and then start coming down slowly again. Tip: Ideally, lowering the weight should take about twice as long as raising it.","Repeat the movement for the prescribed amount of repetitions.","When you are done, place the bar back in the rack."],"images":["Barbell_Bench_Press_-_Medium_Grip/0.jpg","Barbell_Bench_Press_-_Medium_Grip/1.jpg"]},{"id":"Pushups","name":"Pushups","region":"upper","group":"Chest","level":"beginner","equipment":"body only","primary":["chest"],"secondary":["shoulders","triceps"],"mechanic":"compound","steps":["Lie on the floor face down and place your hands about 36 inches apart while holding your torso up at arms length.","Next, lower yourself downward until your chest almost touches the floor as you inhale.","Now breathe out and press your upper body back up to the starting position while squeezing your chest.","After a brief pause at the top contracted position, you can begin to lower yourself downward again for as many repetitions as needed."],"images":["Pushups/0.jpg","Pushups/1.jpg"]},{"id":"Incline_Dumbbell_Press","name":"Incline Dumbbell Press","region":"upper","group":"Chest","level":"beginner","equipment":"dumbbell","primary":["chest"],"secondary":["shoulders","triceps"],"mechanic":"compound","steps":["Lie back on an incline bench with a dumbbell in each hand atop your thighs. The palms of your hands will be facing each other.","Then, using your thighs to help push the dumbbells up, lift the dumbbells one at a time so that you can hold them at shoulder width.","Once you have the dumbbells raised to shoulder width, rotate your wrists forward so that the palms of your hands are facing away from you. This will be your starting position.","Be sure to keep full control of the dumbbells at all times. Then breathe out and push the dumbbells up with your chest.","Lock your arms at the top, hold for a second, and then start slowly lowering the weight. Tip Ideally, lowering the weights should take about twice as long as raising them.","Repeat the movement for the prescribed amount of repetitions.","When you are done, place the dumbbells back on your thighs and then on the floor. This is the safest manner to release the dumbbells."],"images":["Incline_Dumbbell_Press/0.jpg","Incline_Dumbbell_Press/1.jpg"]},{"id":"Dumbbell_Flyes","name":"Dumbbell Flyes","region":"upper","group":"Chest","level":"beginner","equipment":"dumbbell","primary":["chest"],"secondary":[],"mechanic":"isolation","steps":["Lie down on a flat bench with a dumbbell on each hand resting on top of your thighs. The palms of your hand will be facing each other.","Then using your thighs to help raise the dumbbells, lift the dumbbells one at a time so you can hold them in front of you at shoulder width with the palms of your hands facing each other. Raise the dumbbells up like you're pressing them, but stop and hold just before you lock out. This will be your starting position.","With a slight bend on your elbows in order to prevent stress at the biceps tendon, lower your arms out at both sides in a wide arc until you feel a stretch on your chest. Breathe in as you perform this portion of the movement. Tip: Keep in mind that throughout the movement, the arms should remain stationary; the movement should only occur at the shoulder joint.","Return your arms back to the starting position as you squeeze your chest muscles and breathe out. Tip: Make sure to use the same arc of motion used to lower the weights.","Hold for a second at the contracted position and repeat the movement for the prescribed amount of repetitions."],"images":["Dumbbell_Flyes/0.jpg","Dumbbell_Flyes/1.jpg"]},{"id":"Pullups","name":"Pullups","region":"upper","group":"Back","level":"beginner","equipment":"body only","primary":["lats"],"secondary":["biceps","middle back"],"mechanic":"compound","steps":["Grab the pull-up bar with the palms facing forward using the prescribed grip. Note on grips: For a wide grip, your hands need to be spaced out at a distance wider than your shoulder width. For a medium grip, your hands need to be spaced out at a distance equal to your shoulder width and for a close grip at a distance smaller than your shoulder width.","As you have both arms extended in front of you holding the bar at the chosen grip width, bring your torso back around 30 degrees or so while creating a curvature on your lower back and sticking your chest out. This is your starting position.","Pull your torso up until the bar touches your upper chest by drawing the shoulders and the upper arms down and back. Exhale as you perform this portion of the movement. Tip: Concentrate on squeezing the back muscles once you reach the full contracted position. The upper torso should remain stationary as it moves through space and only the arms should move. The forearms should do no other work other than hold the bar.","After a second on the contracted position, start to inhale and slowly lower your torso back to the starting position when your arms are fully extended and the lats are fully stretched.","Repeat this motion for the prescribed amount of repetitions."],"images":["Pullups/0.jpg","Pullups/1.jpg"]},{"id":"Bent_Over_Barbell_Row","name":"Bent Over Barbell Row","region":"upper","group":"Back","level":"beginner","equipment":"barbell","primary":["middle back"],"secondary":["biceps","lats","shoulders"],"mechanic":"compound","steps":["Holding a barbell with a pronated grip (palms facing down), bend your knees slightly and bring your torso forward, by bending at the waist, while keeping the back straight until it is almost parallel to the floor. Tip: Make sure that you keep the head up. The barbell should hang directly in front of you as your arms hang perpendicular to the floor and your torso. This is your starting position.","Now, while keeping the torso stationary, breathe out and lift the barbell to you. Keep the elbows close to the body and only use the forearms to hold the weight. At the top contracted position, squeeze the back muscles and hold for a brief pause.","Then inhale and slowly lower the barbell back to the starting position.","Repeat for the recommended amount of repetitions."],"images":["Bent_Over_Barbell_Row/0.jpg","Bent_Over_Barbell_Row/1.jpg"]},{"id":"Wide-Grip_Lat_Pulldown","name":"Wide-Grip Lat Pulldown","region":"upper","group":"Back","level":"beginner","equipment":"cable","primary":["lats"],"secondary":["biceps","middle back","shoulders"],"mechanic":"compound","steps":["Sit down on a pull-down machine with a wide bar attached to the top pulley. Make sure that you adjust the knee pad of the machine to fit your height. These pads will prevent your body from being raised by the resistance attached to the bar.","Grab the bar with the palms facing forward using the prescribed grip. Note on grips: For a wide grip, your hands need to be spaced out at a distance wider than shoulder width. For a medium grip, your hands need to be spaced out at a distance equal to your shoulder width and for a close grip at a distance smaller than your shoulder width.","As you have both arms extended in front of you holding the bar at the chosen grip width, bring your torso back around 30 degrees or so while creating a curvature on your lower back and sticking your chest out. This is your starting position.","As you breathe out, bring the bar down until it touches your upper chest by drawing the shoulders and the upper arms down and back. Tip: Concentrate on squeezing the back muscles once you reach the full contracted position. The upper torso should remain stationary and only the arms should move. The forearms should do no other work except for holding the bar; therefore do not try to pull down the bar using the forearms.","After a second at the contracted position squeezing your shoulder blades together, slowly raise the bar back to the starting position when your arms are fully extended and the lats are fully stretched. Inhale during this portion of the movement.","Repeat this motion for the prescribed amount of repetitions."],"images":["Wide-Grip_Lat_Pulldown/0.jpg","Wide-Grip_Lat_Pulldown/1.jpg"]},{"id":"Seated_Cable_Rows","name":"Seated Cable Rows","region":"upper","group":"Back","level":"beginner","equipment":"cable","primary":["middle back"],"secondary":["biceps","lats","shoulders"],"mechanic":"compound","steps":["For this exercise you will need access to a low pulley row machine with a V-bar. Note: The V-bar will enable you to have a neutral grip where the palms of your hands face each other. To get into the starting position, first sit down on the machine and place your feet on the front platform or crossbar provided making sure that your knees are slightly bent and not locked.","Lean over as you keep the natural alignment of your back and grab the V-bar handles.","With your arms extended pull back until your torso is at a 90-degree angle from your legs. Your back should be slightly arched and your chest should be sticking out. You should be feeling a nice stretch on your lats as you hold the bar in front of you. This is the starting position of the exercise.","Keeping the torso stationary, pull the handles back towards your torso while keeping the arms close to it until you touch the abdominals. Breathe out as you perform that movement. At that point you should be squeezing your back muscles hard. Hold that contraction for a second and slowly go back to the original position while breathing in.","Repeat for the recommended amount of repetitions."],"images":["Seated_Cable_Rows/0.jpg","Seated_Cable_Rows/1.jpg"]},{"id":"One-Arm_Dumbbell_Row","name":"One-Arm Dumbbell Row","region":"upper","group":"Back","level":"beginner","equipment":"dumbbell","primary":["middle back"],"secondary":["biceps","lats","shoulders"],"mechanic":"compound","steps":["Choose a flat bench and place a dumbbell on each side of it.","Place the right leg on top of the end of the bench, bend your torso forward from the waist until your upper body is parallel to the floor, and place your right hand on the other end of the bench for support.","Use the left hand to pick up the dumbbell on the floor and hold the weight while keeping your lower back straight. The palm of the hand should be facing your torso. This will be your starting position.","Pull the resistance straight up to the side of your chest, keeping your upper arm close to your side and keeping the torso stationary. Breathe out as you perform this step. Tip: Concentrate on squeezing the back muscles once you reach the full contracted position. Also, make sure that the force is performed with the back muscles and not the arms. Finally, the upper torso should remain stationary and only the arms should move. The forearms should do no other work except for holding the dumbbell; therefore do not try to pull the dumbbell up using the forearms.","Lower the resistance straight down to the starting position. Breathe in as you perform this step.","Repeat the movement for the specified amount of repetitions.","Switch sides and repeat again with the other arm."],"images":["One-Arm_Dumbbell_Row/0.jpg","One-Arm_Dumbbell_Row/1.jpg"]},{"id":"Standing_Military_Press","name":"Standing Military Press","region":"upper","group":"Shoulders","level":"beginner","equipment":"barbell","primary":["shoulders"],"secondary":["triceps"],"mechanic":"compound","steps":["Start by placing a barbell that is about chest high on a squat rack. Once you have selected the weights, grab the barbell using a pronated (palms facing forward) grip. Make sure to grip the bar wider than shoulder width apart from each other.","Slightly bend the knees and place the barbell on your collar bone. Lift the barbell up keeping it lying on your chest. Take a step back and position your feet shoulder width apart from each other.","Once you pick up the barbell with the correct grip length, lift the bar up over your head by locking your arms. Hold at about shoulder level and slightly in front of your head. This is your starting position.","Lower the bar down to the collarbone slowly as you inhale.","Lift the bar back up to the starting position as you exhale.","Repeat for the recommended amount of repetitions."],"images":["Standing_Military_Press/0.jpg","Standing_Military_Press/1.jpg"]},{"id":"Dumbbell_Shoulder_Press","name":"Dumbbell Shoulder Press","region":"upper","group":"Shoulders","level":"intermediate","equipment":"dumbbell","primary":["shoulders"],"secondary":["triceps"],"mechanic":"compound","steps":["While holding a dumbbell in each hand, sit on a military press bench or utility bench that has back support. Place the dumbbells upright on top of your thighs.","Now raise the dumbbells to shoulder height one at a time using your thighs to help propel them up into position.","Make sure to rotate your wrists so that the palms of your hands are facing forward. This is your starting position.","Now, exhale and push the dumbbells upward until they touch at the top.","Then, after a brief pause at the top contracted position, slowly lower the weights back down to the starting position while inhaling.","Repeat for the recommended amount of repetitions."],"images":["Dumbbell_Shoulder_Press/0.jpg","Dumbbell_Shoulder_Press/1.jpg"]},{"id":"Side_Lateral_Raise","name":"Side Lateral Raise","region":"upper","group":"Shoulders","level":"beginner","equipment":"dumbbell","primary":["shoulders"],"secondary":[],"mechanic":"isolation","steps":["Pick a couple of dumbbells and stand with a straight torso and the dumbbells by your side at arms length with the palms of the hand facing you. This will be your starting position.","While maintaining the torso in a stationary position (no swinging), lift the dumbbells to your side with a slight bend on the elbow and the hands slightly tilted forward as if pouring water in a glass. Continue to go up until you arms are parallel to the floor. Exhale as you execute this movement and pause for a second at the top.","Lower the dumbbells back down slowly to the starting position as you inhale.","Repeat for the recommended amount of repetitions."],"images":["Side_Lateral_Raise/0.jpg","Side_Lateral_Raise/1.jpg"]},{"id":"Face_Pull","name":"Face Pull","region":"upper","group":"Shoulders","level":"intermediate","equipment":"cable","primary":["shoulders"],"secondary":["middle back"],"mechanic":"compound","steps":["Facing a high pulley with a rope or dual handles attached, pull the weight directly towards your face, separating your hands as you do so. Keep your upper arms parallel to the ground."],"images":["Face_Pull/0.jpg","Face_Pull/1.jpg"]},{"id":"Barbell_Curl","name":"Barbell Curl","region":"upper","group":"Biceps","level":"beginner","equipment":"barbell","primary":["biceps"],"secondary":["forearms"],"mechanic":"isolation","steps":["Stand up with your torso upright while holding a barbell at a shoulder-width grip. The palm of your hands should be facing forward and the elbows should be close to the torso. This will be your starting position.","While holding the upper arms stationary, curl the weights forward while contracting the biceps as you breathe out. Tip: Only the forearms should move.","Continue the movement until your biceps are fully contracted and the bar is at shoulder level. Hold the contracted position for a second and squeeze the biceps hard.","Slowly begin to bring the bar back to starting position as your breathe in.","Repeat for the recommended amount of repetitions."],"images":["Barbell_Curl/0.jpg","Barbell_Curl/1.jpg"]},{"id":"Dumbbell_Bicep_Curl","name":"Dumbbell Bicep Curl","region":"upper","group":"Biceps","level":"beginner","equipment":"dumbbell","primary":["biceps"],"secondary":["forearms"],"mechanic":"isolation","steps":["Stand up straight with a dumbbell in each hand at arm's length. Keep your elbows close to your torso and rotate the palms of your hands until they are facing forward. This will be your starting position.","Now, keeping the upper arms stationary, exhale and curl the weights while contracting your biceps. Continue to raise the weights until your biceps are fully contracted and the dumbbells are at shoulder level. Hold the contracted position for a brief pause as you squeeze your biceps.","Then, inhale and slowly begin to lower the dumbbells back to the starting position.","Repeat for the recommended amount of repetitions."],"images":["Dumbbell_Bicep_Curl/0.jpg","Dumbbell_Bicep_Curl/1.jpg"]},{"id":"Hammer_Curls","name":"Hammer Curls","region":"upper","group":"Biceps","level":"beginner","equipment":"dumbbell","primary":["biceps"],"secondary":[],"mechanic":"isolation","steps":["Stand up with your torso upright and a dumbbell on each hand being held at arms length. The elbows should be close to the torso.","The palms of the hands should be facing your torso. This will be your starting position.","Now, while holding your upper arm stationary, exhale and curl the weight forward while contracting the biceps. Continue to raise the weight until the biceps are fully contracted and the dumbbell is at shoulder level. Hold the contracted position for a brief moment as you squeeze the biceps. Tip: Focus on keeping the elbow stationary and only moving your forearm.","After the brief pause, inhale and slowly begin the lower the dumbbells back down to the starting position.","Repeat for the recommended amount of repetitions."],"images":["Hammer_Curls/0.jpg","Hammer_Curls/1.jpg"]},{"id":"Triceps_Pushdown","name":"Triceps Pushdown","region":"upper","group":"Triceps","level":"beginner","equipment":"cable","primary":["triceps"],"secondary":[],"mechanic":"isolation","steps":["Attach a straight or angled bar to a high pulley and grab with an overhand grip (palms facing down) at shoulder width.","Standing upright with the torso straight and a very small inclination forward, bring the upper arms close to your body and perpendicular to the floor. The forearms should be pointing up towards the pulley as they hold the bar. This is your starting position.","Using the triceps, bring the bar down until it touches the front of your thighs and the arms are fully extended perpendicular to the floor. The upper arms should always remain stationary next to your torso and only the forearms should move. Exhale as you perform this movement.","After a second hold at the contracted position, bring the bar slowly up to the starting point. Breathe in as you perform this step.","Repeat for the recommended amount of repetitions."],"images":["Triceps_Pushdown/0.jpg","Triceps_Pushdown/1.jpg"]},{"id":"Dips_-_Triceps_Version","name":"Dips - Triceps Version","region":"upper","group":"Triceps","level":"beginner","equipment":"body only","primary":["triceps"],"secondary":["chest","shoulders"],"mechanic":"compound","steps":["To get into the starting position, hold your body at arm's length with your arms nearly locked above the bars.","Now, inhale and slowly lower yourself downward. Your torso should remain upright and your elbows should stay close to your body. This helps to better focus on tricep involvement. Lower yourself until there is a 90 degree angle formed between the upper arm and forearm.","Then, exhale and push your torso back up using your triceps to bring your body back to the starting position.","Repeat the movement for the prescribed amount of repetitions."],"images":["Dips_-_Triceps_Version/0.jpg","Dips_-_Triceps_Version/1.jpg"]},{"id":"Lying_Triceps_Press","name":"Lying Triceps Press","region":"upper","group":"Triceps","level":"intermediate","equipment":"e-z curl bar","primary":["triceps"],"secondary":[],"mechanic":"isolation","steps":["Lie on a flat bench with either an e-z bar (my preference) or a straight bar placed on the floor behind your head and your feet on the floor.","Grab the bar behind you, using a medium overhand (pronated) grip, and raise the bar in front of you at arms length. Tip: The arms should be perpendicular to the torso and the floor. The elbows should be tucked in. This is the starting position.","As you breathe in, slowly lower the weight until the bar lightly touches your forehead while keeping the upper arms and elbows stationary.","At that point, use the triceps to bring the weight back up to the starting position as you breathe out.","Repeat for the recommended amount of repetitions."],"images":["Lying_Triceps_Press/0.jpg","Lying_Triceps_Press/1.jpg"]},{"id":"Barbell_Full_Squat","name":"Barbell Full Squat","region":"lower","group":"Quads","level":"intermediate","equipment":"barbell","primary":["quadriceps"],"secondary":["calves","glutes","hamstrings","lower back"],"mechanic":"compound","steps":["This exercise is best performed inside a squat rack for safety purposes. To begin, first set the bar on a rack just above shoulder level. Once the correct height is chosen and the bar is loaded, step under the bar and place the back of your shoulders (slightly below the neck) across it.","Hold on to the bar using both arms at each side and lift it off the rack by first pushing with your legs and at the same time straightening your torso.","Step away from the rack and position your legs using a shoulder-width medium stance with the toes slightly pointed out. Keep your head up at all times and maintain a straight back. This will be your starting position.","Begin to slowly lower the bar by bending the knees and sitting back with your hips as you maintain a straight posture with the head up. Continue down until your hamstrings are on your calves. Inhale as you perform this portion of the movement.","Begin to raise the bar as you exhale by pushing the floor with the heel or middle of your foot as you straighten the legs and extend the hips to go back to the starting position.","Repeat for the recommended amount of repetitions."],"images":["Barbell_Full_Squat/0.jpg","Barbell_Full_Squat/1.jpg"]},{"id":"Leg_Press","name":"Leg Press","region":"lower","group":"Quads","level":"beginner","equipment":"machine","primary":["quadriceps"],"secondary":["calves","glutes","hamstrings"],"mechanic":"compound","steps":["Using a leg press machine, sit down on the machine and place your legs on the platform directly in front of you at a medium (shoulder width) foot stance. (Note: For the purposes of this discussion we will use the medium stance described above which targets overall development; however you can choose any of the three stances described in the foot positioning section).","Lower the safety bars holding the weighted platform in place and press the platform all the way up until your legs are fully extended in front of you. Tip: Make sure that you do not lock your knees. Your torso and the legs should make a perfect 90-degree angle. This will be your starting position.","As you inhale, slowly lower the platform until your upper and lower legs make a 90-degree angle.","Pushing mainly with the heels of your feet and using the quadriceps go back to the starting position as you exhale.","Repeat for the recommended amount of repetitions and ensure to lock the safety pins properly once you are done. You do not want that platform falling on you fully loaded."],"images":["Leg_Press/0.jpg","Leg_Press/1.jpg"]},{"id":"Bodyweight_Squat","name":"Bodyweight Squat","region":"lower","group":"Quads","level":"beginner","equipment":"body only","primary":["quadriceps"],"secondary":["glutes","hamstrings"],"mechanic":"compound","steps":["Stand with your feet shoulder width apart. You can place your hands behind your head. This will be your starting position.","Begin the movement by flexing your knees and hips, sitting back with your hips.","Continue down to full depth if you are able,and quickly reverse the motion until you return to the starting position. As you squat, keep your head and chest up and push your knees out."],"images":["Bodyweight_Squat/0.jpg","Bodyweight_Squat/1.jpg"]},{"id":"Dumbbell_Lunges","name":"Dumbbell Lunges","region":"lower","group":"Quads","level":"beginner","equipment":"dumbbell","primary":["quadriceps"],"secondary":["calves","glutes","hamstrings"],"mechanic":"compound","steps":["Stand with your torso upright holding two dumbbells in your hands by your sides. This will be your starting position.","Step forward with your right leg around 2 feet or so from the foot being left stationary behind and lower your upper body down, while keeping the torso upright and maintaining balance. Inhale as you go down. Note: As in the other exercises, do not allow your knee to go forward beyond your toes as you come down, as this will put undue stress on the knee joint. Make sure that you keep your front shin perpendicular to the ground.","Using mainly the heel of your foot, push up and go back to the starting position as you exhale.","Repeat the movement for the recommended amount of repetitions and then perform with the left leg."],"images":["Dumbbell_Lunges/0.jpg","Dumbbell_Lunges/1.jpg"]},{"id":"Goblet_Squat","name":"Goblet Squat","region":"lower","group":"Quads","level":"beginner","equipment":"kettlebells","primary":["quadriceps"],"secondary":["calves","glutes","hamstrings","shoulders"],"mechanic":"compound","steps":["Stand holding a light kettlebell by the horns close to your chest. This will be your starting position.","Squat down between your legs until your hamstrings are on your calves. Keep your chest and head up and your back straight.","At the bottom position, pause and use your elbows to push your knees out. Return to the starting position, and repeat for 10-20 repetitions."],"images":["Goblet_Squat/0.jpg","Goblet_Squat/1.jpg"]},{"id":"Romanian_Deadlift","name":"Romanian Deadlift","region":"lower","group":"Hamstrings","level":"intermediate","equipment":"barbell","primary":["hamstrings"],"secondary":["calves","glutes","lower back"],"mechanic":"compound","steps":["Put a barbell in front of you on the ground and grab it using a pronated (palms facing down) grip that a little wider than shoulder width. Tip: Depending on the weight used, you may need wrist wraps to perform the exercise and also a raised platform in order to allow for better range of motion.","Bend the knees slightly and keep the shins vertical, hips back and back straight. This will be your starting position.","Keeping your back and arms completely straight at all times, use your hips to lift the bar as you exhale. Tip: The movement should not be fast but steady and under control.","Once you are standing completely straight up, lower the bar by pushing the hips back, only slightly bending the knees, unlike when squatting. Tip: Take a deep breath at the start of the movement and keep your chest up. Hold your breath as you lower and exhale as you complete the movement.","Repeat for the recommended amount of repetitions."],"images":["Romanian_Deadlift/0.jpg","Romanian_Deadlift/1.jpg"]},{"id":"Barbell_Deadlift","name":"Barbell Deadlift","region":"lower","group":"Hamstrings","level":"intermediate","equipment":"barbell","primary":["lower back"],"secondary":["calves","forearms","glutes","hamstrings","lats","middle back","quadriceps","traps"],"mechanic":"compound","steps":["Stand in front of a loaded barbell.","While keeping the back as straight as possible, bend your knees, bend forward and grasp the bar using a medium (shoulder width) overhand grip. This will be the starting position of the exercise. Tip: If it is difficult to hold on to the bar with this grip, alternate your grip or use wrist straps.","While holding the bar, start the lift by pushing with your legs while simultaneously getting your torso to the upright position as you breathe out. In the upright position, stick your chest out and contract the back by bringing the shoulder blades back. Think of how the soldiers in the military look when they are in standing in attention.","Go back to the starting position by bending at the knees while simultaneously leaning the torso forward at the waist while keeping the back straight. When the weights on the bar touch the floor you are back at the starting position and ready to perform another repetition.","Perform the amount of repetitions prescribed in the program."],"images":["Barbell_Deadlift/0.jpg","Barbell_Deadlift/1.jpg"]},{"id":"Lying_Leg_Curls","name":"Lying Leg Curls","region":"lower","group":"Hamstrings","level":"beginner","equipment":"machine","primary":["hamstrings"],"secondary":[],"mechanic":"isolation","steps":["Adjust the machine lever to fit your height and lie face down on the leg curl machine with the pad of the lever on the back of your legs (just a few inches under the calves). Tip: Preferably use a leg curl machine that is angled as opposed to flat since an angled position is more favorable for hamstrings recruitment.","Keeping the torso flat on the bench, ensure your legs are fully stretched and grab the side handles of the machine. Position your toes straight (or you can also use any of the other two stances described on the foot positioning section). This will be your starting position.","As you exhale, curl your legs up as far as possible without lifting the upper legs from the pad. Once you hit the fully contracted position, hold it for a second.","As you inhale, bring the legs back to the initial position. Repeat for the recommended amount of repetitions."],"images":["Lying_Leg_Curls/0.jpg","Lying_Leg_Curls/1.jpg"]},{"id":"Seated_Leg_Curl","name":"Seated Leg Curl","region":"lower","group":"Hamstrings","level":"beginner","equipment":"machine","primary":["hamstrings"],"secondary":[],"mechanic":"isolation","steps":["Adjust the machine lever to fit your height and sit on the machine with your back against the back support pad.","Place the back of lower leg on top of padded lever (just a few inches under the calves) and secure the lap pad against your thighs, just above the knees. Then grasp the side handles on the machine as you point your toes straight (or you can also use any of the other two stances) and ensure that the legs are fully straight right in front of you. This will be your starting position.","As you exhale, pull the machine lever as far as possible to the back of your thighs by flexing at the knees. Keep your torso stationary at all times. Hold the contracted position for a second.","Slowly return to the starting position as you breathe in.","Repeat for the recommended amount of repetitions."],"images":["Seated_Leg_Curl/0.jpg","Seated_Leg_Curl/1.jpg"]},{"id":"Butt_Lift_Bridge","name":"Butt Lift (Bridge)","region":"lower","group":"Glutes","level":"beginner","equipment":"body only","primary":["glutes"],"secondary":["hamstrings"],"mechanic":"isolation","steps":["Lie flat on the floor on your back with the hands by your side and your knees bent. Your feet should be placed around shoulder width. This will be your starting position.","Pushing mainly with your heels, lift your hips off the floor while keeping your back straight. Breathe out as you perform this part of the motion and hold at the top for a second.","Slowly go back to the starting position as you breathe in."],"images":["Butt_Lift_Bridge/0.jpg","Butt_Lift_Bridge/1.jpg"]},{"id":"Barbell_Hip_Thrust","name":"Barbell Hip Thrust","region":"lower","group":"Glutes","level":"intermediate","equipment":"barbell","primary":["glutes"],"secondary":["calves","hamstrings"],"mechanic":"compound","steps":["Begin seated on the ground with a bench directly behind you. Have a loaded barbell over your legs. Using a fat bar or having a pad on the bar can greatly reduce the discomfort caused by this exercise.","Roll the bar so that it is directly above your hips, and lean back against the bench so that your shoulder blades are near the top of it.","Begin the movement by driving through your feet, extending your hips vertically through the bar. Your weight should be supported by your shoulder blades and your feet. Extend as far as possible, then reverse the motion to return to the starting position."],"images":["Barbell_Hip_Thrust/0.jpg","Barbell_Hip_Thrust/1.jpg"]},{"id":"Standing_Calf_Raises","name":"Standing Calf Raises","region":"lower","group":"Calves","level":"beginner","equipment":"machine","primary":["calves"],"secondary":[],"mechanic":"isolation","steps":["Adjust the padded lever of the calf raise machine to fit your height.","Place your shoulders under the pads provided and position your toes facing forward (or using any of the two other positions described at the beginning of the chapter). The balls of your feet should be secured on top of the calf block with the heels extending off it. Push the lever up by extending your hips and knees until your torso is standing erect. The knees should be kept with a slight bend; never locked. Toes should be facing forward, outwards or inwards as described at the beginning of the chapter. This will be your starting position.","Raise your heels as you breathe out by extending your ankles as high as possible and flexing your calf. Ensure that the knee is kept stationary at all times. There should be no bending at any time. Hold the contracted position by a second before you start to go back down.","Go back slowly to the starting position as you breathe in by lowering your heels as you bend the ankles until calves are stretched.","Repeat for the recommended amount of repetitions."],"images":["Standing_Calf_Raises/0.jpg","Standing_Calf_Raises/1.jpg"]},{"id":"Seated_Calf_Raise","name":"Seated Calf Raise","region":"lower","group":"Calves","level":"beginner","equipment":"machine","primary":["calves"],"secondary":[],"mechanic":"isolation","steps":["Sit on the machine and place your toes on the lower portion of the platform provided with the heels extending off. Choose the toe positioning of your choice (forward, in, or out) as per the beginning of this chapter.","Place your lower thighs under the lever pad, which will need to be adjusted according to the height of your thighs. Now place your hands on top of the lever pad in order to prevent it from slipping forward.","Lift the lever slightly by pushing your heels up and release the safety bar. This will be your starting position.","Slowly lower your heels by bending at the ankles until the calves are fully stretched. Inhale as you perform this movement.","Raise the heels by extending the ankles as high as possible as you contract the calves and breathe out. Hold the top contraction for a second.","Repeat for the recommended amount of repetitions."],"images":["Seated_Calf_Raise/0.jpg","Seated_Calf_Raise/1.jpg"]},{"id":"Plank","name":"Plank","region":"core","group":"Core","level":"beginner","equipment":"body only","primary":["abdominals"],"secondary":[],"mechanic":"isolation","steps":["Get into a prone position on the floor, supporting your weight on your toes and your forearms. Your arms are bent and directly below the shoulder.","Keep your body straight at all times, and hold this position as long as possible. To increase difficulty, an arm or leg can be raised."],"images":["Plank/0.jpg","Plank/1.jpg"]},{"id":"Hanging_Leg_Raise","name":"Hanging Leg Raise","region":"core","group":"Core","level":"expert","equipment":"body only","primary":["abdominals"],"secondary":[],"mechanic":"isolation","steps":["Hang from a chin-up bar with both arms extended at arms length in top of you using either a wide grip or a medium grip. The legs should be straight down with the pelvis rolled slightly backwards. This will be your starting position.","Raise your legs until the torso makes a 90-degree angle with the legs. Exhale as you perform this movement and hold the contraction for a second or so.","Go back slowly to the starting position as you breathe in.","Repeat for the recommended amount of repetitions."],"images":["Hanging_Leg_Raise/0.jpg","Hanging_Leg_Raise/1.jpg"]},{"id":"Crunches","name":"Crunches","region":"core","group":"Core","level":"beginner","equipment":"body only","primary":["abdominals"],"secondary":[],"mechanic":"isolation","steps":["Lie flat on your back with your feet flat on the ground, or resting on a bench with your knees bent at a 90 degree angle. If you are resting your feet on a bench, place them three to four inches apart and point your toes inward so they touch.","Now place your hands lightly on either side of your head keeping your elbows in. Tip: Don't lock your fingers behind your head.","While pushing the small of your back down in the floor to better isolate your abdominal muscles, begin to roll your shoulders off the floor.","Continue to push down as hard as you can with your lower back as you contract your abdominals and exhale. Your shoulders should come up off the floor only about four inches, and your lower back should remain on the floor. At the top of the movement, contract your abdominals hard and keep the contraction for a second. Tip: Focus on slow, controlled movement - don't cheat yourself by using momentum.","After the one second contraction, begin to come down slowly again to the starting position as you inhale.","Repeat for the recommended amount of repetitions."],"images":["Crunches/0.jpg","Crunches/1.jpg"]},{"id":"Russian_Twist","name":"Russian Twist","region":"core","group":"Core","level":"intermediate","equipment":"body only","primary":["abdominals"],"secondary":["lower back"],"mechanic":"compound","steps":["Lie down on the floor placing your feet either under something that will not move or by having a partner hold them. Your legs should be bent at the knees.","Elevate your upper body so that it creates an imaginary V-shape with your thighs. Your arms should be fully extended in front of you perpendicular to your torso and with the hands clasped. This is the starting position.","Twist your torso to the right side until your arms are parallel with the floor while breathing out.","Hold the contraction for a second and move back to the starting position while breathing out. Now move to the opposite side performing the same techniques you applied to the right side.","Repeat for the recommended amount of repetitions."],"images":["Russian_Twist/0.jpg","Russian_Twist/1.jpg"]}];
+EXERCISES.forEach(e=>{ e.lvl = e.level==='expert' ? 'intermediate' : e.level; });
+
+/* ---------- state ---------- */
+const LS='ironpath';
+let cfg=Object.assign({focus:'upper',level:'beginner',goal:'hypertrophy',dur:45,
+  equipment:['barbell','dumbbell','body only','cable','machine','kettlebells','e-z curl bar']},
+  JSON.parse(localStorage.getItem(LS)||'{}'));
+let plan=[]; let wkIndex=0; let wkState={};
+const EQUIP=['barbell','dumbbell','body only','cable','machine','kettlebells','e-z curl bar'];
+const ORDER={upper:['Chest','Back','Shoulders','Biceps','Triceps'],
+  lower:['Quads','Hamstrings','Glutes','Calves'],
+  full:['Quads','Chest','Back','Hamstrings','Shoulders','Glutes','Biceps','Triceps','Calves']};
+const SCHEMES={strength:{sets:5,reps:'4–6',rest:180},hypertrophy:{sets:4,reps:'8–12',rest:90},
+  endurance:{sets:3,reps:'15–20',rest:45},fatloss:{sets:3,reps:'12–15',rest:45}};
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const save=()=>localStorage.setItem(LS,JSON.stringify(cfg));
+const imgs=e=>e.images.map(i=>CDN+i);
+
+/* ---------- BROWSE ---------- */
+let curRegion='all', curGroup='all';
+function groupsFor(r){
+  if(r==='all') return [];
+  return [...new Set(EXERCISES.filter(e=>e.region===r).map(e=>e.group))];
+}
+function renderGroupChips(){
+  const wrap=$('#groupChips'); const gs=groupsFor(curRegion);
+  if(!gs.length){wrap.innerHTML='';return;}
+  wrap.innerHTML=['all',...gs].map(g=>
+    `<span class="chip ${g===curGroup?'on':''}" data-g="${g}">${g==='all'?'All':g}</span>`).join('');
+}
+function renderLib(){
+  const grid=$('#libGrid');
+  let list=EXERCISES.filter(e=>curRegion==='all'||e.region===curRegion);
+  if(curGroup!=='all') list=list.filter(e=>e.group===curGroup);
+  grid.innerHTML=list.map((e,i)=>{
+    const[a,b]=imgs(e);
+    return `<div class="card anim" data-id="${e.id}" style="animation-delay:${i*15}ms">
+      <div class="demo"><img class="f0" loading="lazy" src="${a}" alt=""><img class="f1" loading="lazy" src="${b}" alt="">
+      <span class="badge">${e.lvl}</span></div>
+      <div class="meta"><div class="nm">${e.name}</div><div class="tg">${e.primary.join(', ')}</div></div></div>`;
+  }).join('');
+}
+$('#regionSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  $$('#regionSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  curRegion=b.dataset.r;curGroup='all';renderGroupChips();renderLib();};
+$('#groupChips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;
+  curGroup=c.dataset.g;renderGroupChips();renderLib();};
+$('#libGrid').onclick=e=>{const c=e.target.closest('.card');if(c)openDetail(c.dataset.id);};
+
+/* ---------- DETAIL SHEET ---------- */
+function openDetail(id){
+  const e=EXERCISES.find(x=>x.id===id);const[a,b]=imgs(e);
+  $('#detailSheet').innerHTML=`<div class="grip"></div>
+    <div class="wk-demo anim" style="max-height:38vh"><img class="f0" src="${a}"><img class="f1" src="${b}"></div>
+    <h3>${e.name}</h3>
+    <div class="muted" style="font-size:13px;text-transform:capitalize">${e.equipment} · ${e.lvl} · ${e.mechanic}</div>
+    <div class="tags">
+      ${e.primary.map(m=>`<span class="tag prim">🎯 ${m}</span>`).join('')}
+      ${e.secondary.map(m=>`<span class="tag">${m}</span>`).join('')}
+    </div>
+    <ol class="steps">${e.steps.map(s=>`<li>${s}</li>`).join('')}</ol>`;
+  openSheet('#detailBg');
+}
+
+/* ---------- PLAN ---------- */
+function buildPlan(){
+  const f=cfg.focus, order=ORDER[f]||ORDER.upper;
+  const lvlOk=e=> cfg.level==='intermediate' ? true : e.lvl==='beginner';
+  let pool=EXERCISES.filter(e=>{
+    const reg = f==='full' ? (e.region==='upper'||e.region==='lower') : e.region===f;
+    return reg && lvlOk(e) && cfg.equipment.includes(e.equipment);
+  });
+  const sc=SCHEMES[cfg.goal];
+  const perEx=sc.sets*(40+sc.rest)+50;            // rough seconds per exercise
+  const budget=cfg.dur*60;
+  const out=[]; let used=0;
+  // one pass: best (compound first) from each muscle group in order
+  for(const g of order){
+    const cands=pool.filter(e=>e.group===g)
+      .sort((x,y)=>(x.mechanic==='compound'?0:1)-(y.mechanic==='compound'?0:1));
+    if(cands.length && used+perEx<=budget){out.push(cands[0]);used+=perEx;}
+  }
+  // second pass: add a second movement to remaining groups while time allows
+  for(const g of order){
+    if(used+perEx>budget) break;
+    const have=out.filter(e=>e.group===g).map(e=>e.id);
+    const extra=pool.filter(e=>e.group===g&&!have.includes(e.id));
+    if(extra.length){out.push(extra[Math.floor(Math.random()*extra.length)]);used+=perEx;}
+  }
+  // add core finisher for upper/full if room
+  if(f!=='lower' && used+perEx<=budget){
+    const core=EXERCISES.filter(e=>e.region==='core'&&lvlOk(e)&&cfg.equipment.includes(e.equipment));
+    if(core.length) out.push(core[Math.floor(Math.random()*core.length)]);
+  }
+  plan=out.map(e=>({...e,...sc}));
+  renderPlan();
+}
+function renderPlan(){
+  const sc=SCHEMES[cfg.goal];
+  $('#planSub').textContent=`${cap(cfg.focus)} · ${cap(cfg.goal)} · ${cfg.level} · ~${cfg.dur} min`;
+  if(!plan.length){$('#planList').innerHTML=`<div class="empty">No exercises match that equipment. Tap Optimize and add gear.</div>`;
+    $('#planMeta').textContent='';return;}
+  $('#planList').innerHTML=plan.map(e=>{const[a]=imgs(e);
+    return `<div class="plan-item" data-id="${e.id}">
+      <img class="thumb" loading="lazy" src="${a}">
+      <div class="pi-main"><div class="pi-name">${e.name}</div>
+        <div class="pi-sub" style="text-transform:capitalize">${e.group} · ${e.primary.join(', ')}</div></div>
+      <div class="pi-sets">${e.sets}×${e.reps}</div></div>`;}).join('');
+  const mins=Math.round(plan.length*(sc.sets*(40+sc.rest)+50)/60);
+  $('#planMeta').innerHTML=`<b>${plan.length} exercises</b> · ${sc.sets} sets of ${sc.reps} reps · ${sc.rest}s rest · ≈ ${mins} min.  Warm up 5 min before you start.`;
+}
+$('#planList').onclick=e=>{const it=e.target.closest('.plan-item');if(it)openDetail(it.dataset.id);};
+$('#btnRegen').onclick=buildPlan;
+$('#btnStart').onclick=()=>{if(!plan.length)return;startWorkout();};
+
+/* ---------- OPTIMIZE SHEET ---------- */
+function paintOpt(){
+  $$('#optFocus button').forEach(b=>b.classList.toggle('on',b.dataset.v===cfg.focus));
+  $$('#optLevel button').forEach(b=>b.classList.toggle('on',b.dataset.v===cfg.level));
+  $$('#optGoal button').forEach(b=>b.classList.toggle('on',b.dataset.v===cfg.goal));
+  $('#optDur').value=cfg.dur; $('#durVal').textContent=cfg.dur+' min';
+  $('#optEquip').innerHTML=EQUIP.map(eq=>
+    `<span class="chip ${cfg.equipment.includes(eq)?'on':''}" data-eq="${eq}">${eq==='body only'?'bodyweight':eq}</span>`).join('');
+}
+$('#btnOptimize').onclick=()=>{paintOpt();openSheet('#optBg');};
+$('#optFocus').onclick=e=>segPick(e,'focus');
+$('#optLevel').onclick=e=>segPick(e,'level');
+$('#optGoal').onclick=e=>segPick(e,'goal');
+function segPick(e,key){const b=e.target.closest('button');if(!b)return;cfg[key]=b.dataset.v;paintOpt();}
+$('#optDur').oninput=e=>{cfg.dur=+e.target.value;$('#durVal').textContent=cfg.dur+' min';};
+$('#optEquip').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;
+  const eq=c.dataset.eq; cfg.equipment.includes(eq)?cfg.equipment=cfg.equipment.filter(x=>x!==eq):cfg.equipment.push(eq);paintOpt();};
+$$('#optBg [data-preset]').forEach(b=>b.onclick=()=>{
+  cfg.equipment = b.dataset.preset==='all'?[...EQUIP]
+    : b.dataset.preset==='home'?['dumbbell','body only']:['body only'];paintOpt();});
+$('#optApply').onclick=()=>{save();updateLevelPill();buildPlan();closeSheet('#optBg');go('plan');};
+
+/* ---------- WORKOUT DO-ALONG ---------- */
+function startWorkout(){
+  wkIndex=0; wkState={};
+  plan.forEach((e,i)=>wkState[i]=new Array(e.sets).fill(false));
+  $('#wkLive').style.display='block'; $('#wkDone').style.display='none';
+  go('workout'); renderWk();
+}
+function renderWk(){
+  const e=plan[wkIndex];const[a,b]=imgs(e);
+  $('#wkCount').textContent=`Exercise ${wkIndex+1} of ${plan.length} · ${e.group}`;
+  $('#wkBar').style.width=((wkIndex)/plan.length*100)+'%';
+  $('#wkName').textContent=e.name;
+  $('#wkDemo').innerHTML=`<img class="f0" src="${a}"><img class="f1" src="${b}">`;
+  $('#wkTags').innerHTML=e.primary.map(m=>`<span class="tag prim">🎯 ${m}</span>`).join('')
+    +e.secondary.slice(0,3).map(m=>`<span class="tag">${m}</span>`).join('');
+  $('#wkScheme').textContent=`${e.sets} sets × ${e.reps} reps · ${e.rest}s rest`;
+  $('#restLen').textContent=e.rest+'s';
+  $('#wkSets').innerHTML=wkState[wkIndex].map((d,i)=>
+    `<button class="setbtn ${d?'done':''}" data-set="${i}">Set ${i+1}${d?' ✓':''}</button>`).join('');
+  $('#btnNext').textContent = wkIndex===plan.length-1 ? 'Finish ✓' : 'Next ›';
+}
+$('#wkSets').onclick=e=>{const b=e.target.closest('.setbtn');if(!b)return;
+  const i=+b.dataset.set; wkState[wkIndex][i]=!wkState[wkIndex][i];
+  renderWk(); if(wkState[wkIndex][i]) openRest(plan[wkIndex].rest);};
+$('#btnHow').onclick=()=>openDetail(plan[wkIndex].id);
+$('#btnPrev').onclick=()=>{if(wkIndex>0){wkIndex--;renderWk();}};
+$('#btnNext').onclick=()=>{if(wkIndex<plan.length-1){wkIndex++;renderWk();}else finishWk();};
+$('#btnRest').onclick=()=>openRest(plan[wkIndex].rest);
+function finishWk(){
+  $('#wkBar').style.width='100%';
+  const sets=Object.values(wkState).reduce((n,a)=>n+a.filter(Boolean).length,0);
+  $('#doneSummary').textContent=`${plan.length} exercises · ${sets} sets logged. Nice work — recover well.`;
+  $('#wkLive').style.display='none'; $('#wkDone').style.display='block';
+}
+$('#btnFinish').onclick=()=>go('plan');
+
+/* ---------- REST TIMER ---------- */
+let restT=null, restLeft=0;
+function openRest(sec){restLeft=sec;paintRest();openSheet('#restBg');
+  clearInterval(restT);restT=setInterval(()=>{restLeft--;paintRest();
+    if(restLeft<=0){clearInterval(restT);beep();vib();closeSheet('#restBg');}},1000);}
+function paintRest(){const m=Math.floor(Math.max(restLeft,0)/60),s=Math.max(restLeft,0)%60;
+  $('#restClock').textContent=m+':'+String(s).padStart(2,'0');}
+$('#restSkip').onclick=()=>{clearInterval(restT);closeSheet('#restBg');};
+$$('#restBg [data-adj]').forEach(b=>b.onclick=()=>{restLeft=Math.max(5,restLeft+ +b.dataset.adj);paintRest();});
+/* iOS needs the AudioContext created & resumed during a user gesture, or later beeps are silent.
+   Unlock a single shared context on first tap so the rest-timer beep works on iPhone. */
+let AC=null;
+function unlockAudio(){try{if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();
+  if(AC.state==='suspended')AC.resume();}catch(e){}}
+window.addEventListener('touchstart',unlockAudio,{passive:true});
+window.addEventListener('click',unlockAudio);
+function beep(){try{unlockAudio();if(!AC)return;
+  const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);
+  o.frequency.value=880;o.start();g.gain.setValueAtTime(.25,AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+.6);o.stop(AC.currentTime+.6);}catch(e){}}
+function vib(){try{if(navigator.vibrate)navigator.vibrate([200,80,200]);}catch(e){}}
+
+/* ---------- sheets / nav helpers ---------- */
+function openSheet(id){$(id).classList.add('open');}
+function closeSheet(id){$(id).classList.remove('open');}
+$$('.sheet-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');}));
+function go(v){
+  $$('.view').forEach(x=>x.classList.remove('on'));$('#v-'+v).classList.add('on');
+  $$('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  window.scrollTo(0,0);
+}
+$('#tabs').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v);};
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function updateLevelPill(){$('#levelPill').textContent=cap(cfg.level);}
+
+/* ---------- install prompt (Android/Chrome) ---------- */
+let deferred=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('#installPill').style.display='inline-block';});
+$('#installPill').onclick=async()=>{if(deferred){deferred.prompt();await deferred.userChoice;deferred=null;$('#installPill').style.display='none';}};
+
+/* ---------- iOS install hint (Safari has no install prompt) ---------- */
+(function(){
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone=window.navigator.standalone||matchMedia('(display-mode: standalone)').matches;
+  if(!isIOS||standalone||localStorage.getItem('ip_iosHint')) return;
+  const bar=document.createElement('div');
+  bar.style.cssText='position:fixed;left:10px;right:10px;bottom:78px;z-index:50;background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:12px 14px;font-size:13px;display:flex;gap:10px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.35)';
+  bar.innerHTML='<span style="font-size:20px">📲</span><span style="flex:1">Install: tap <b>Share</b> <span style="display:inline-block;border:1px solid var(--muted);border-radius:4px;padding:0 4px">↑</span> then <b>Add to Home Screen</b>.</span><span style="font-weight:800;color:var(--muted);padding:0 4px;cursor:pointer">✕</span>';
+  bar.lastChild.onclick=()=>{bar.remove();localStorage.setItem('ip_iosHint','1');};
+  document.body.appendChild(bar);
+})();
+
+/* ---------- init ---------- */
+renderGroupChips();renderLib();buildPlan();updateLevelPill();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
