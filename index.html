@@ -65,6 +65,27 @@
   .chip{border:1px solid var(--line);background:var(--card);color:var(--text);padding:7px 12px;border-radius:999px;font-size:13px;cursor:pointer;font-weight:600}
   .chip.on{border-color:var(--accent);color:var(--accent);background:rgba(79,140,255,.10)}
 
+  /* today's setup: preset cards + equipment tiles */
+  .presetgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .presetgrid button{display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:10px 4px;font-size:11.5px;font-weight:700;cursor:pointer}
+  .presetgrid button .ic{font-size:22px;line-height:1}
+  .presetgrid button.on{border-color:var(--accent);background:rgba(79,140,255,.12);color:var(--accent)}
+  .tilegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .tilegrid .tile{display:flex;flex-direction:column;align-items:center;gap:4px;border:1.5px solid var(--line);background:var(--card);color:var(--muted);border-radius:12px;padding:9px 3px;font-size:10.5px;font-weight:700;cursor:pointer;position:relative;text-align:center}
+  .tilegrid .tile .ic{font-size:21px;line-height:1;filter:grayscale(1);opacity:.6}
+  .tilegrid .tile.on{border-color:var(--accent2);background:rgba(34,201,138,.12);color:var(--text)}
+  .tilegrid .tile.on .ic{filter:none;opacity:1}
+  .tilegrid .tile.on:after{content:"✓";position:absolute;top:3px;right:5px;color:var(--accent2);font-size:11px;font-weight:900}
+
+  /* warm-up / cardio info cards */
+  .block-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 0;background:var(--card)}
+  .block-card .bc-head{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin-bottom:6px}
+  .block-card.warm{border-left:3px solid var(--warn)}
+  .block-card.cardio{border-left:3px solid var(--danger)}
+  .block-card ul{margin:6px 0 0;padding-left:18px}
+  .block-card li{font-size:13px;color:var(--muted);margin:3px 0}
+  .block-card .lead{font-size:13px;color:var(--muted)}
+
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:.15s}
   .card:active{transform:scale(.985)}
@@ -178,18 +199,20 @@
   <!-- ============ PLAN ============ -->
   <section class="view" id="v-plan">
     <h2>Your Plan</h2>
-    <div class="sub" id="planSub">A balanced session built from your settings. Tap Optimize to tailor it.</div>
+    <div class="sub" id="planSub">A balanced session built from your settings.</div>
 
     <div class="row tight">
-      <button class="btn ghost" id="btnOptimize">⚙︎ Optimize</button>
-      <button class="btn ghost" id="btnRegen">↻ Shuffle</button>
+      <button class="btn primary" id="btnOptimize">⚙︎ Today's setup</button>
+      <button class="btn ghost" id="btnRegen">🔀 Shuffle</button>
     </div>
 
+    <div class="block-card warm" id="planWarm"></div>
     <div id="planList"></div>
-
     <div class="note" id="planMeta"></div>
-    <button class="btn green block" id="btnStart">▶ Start Do-Along Workout</button>
-    <small class="lic">Always warm up first. Stop if you feel pain. This app is general guidance, not medical advice.</small>
+    <div class="block-card cardio" id="planCardio"></div>
+
+    <button class="btn green block" id="btnStart" style="margin-top:6px">▶ Start Do-Along Workout</button>
+    <small class="lic">Warm up first. Stop if you feel sharp pain. General guidance, not medical advice.</small>
   </section>
 
   <!-- ============ WORKOUT ============ -->
@@ -245,51 +268,64 @@
   <div class="sheet" id="detailSheet"><div class="grip"></div></div>
 </div>
 
-<!-- optimize sheet -->
+<!-- today's setup sheet -->
 <div class="sheet-bg" id="optBg">
   <div class="sheet">
     <div class="grip"></div>
-    <h3>Optimize your plan</h3>
-    <p class="muted" style="margin-top:0;font-size:13px">Tune the plan to your goal, gear and time. Saved on this device.</p>
+    <h3>Today's setup</h3>
+    <p class="muted" style="margin-top:0;font-size:13px">Where are you training today? Build a plan for the gear you actually have.</p>
 
     <div class="field">
-      <label>Focus</label>
-      <div class="seg" id="optFocus">
-        <button data-v="upper">Upper</button>
-        <button data-v="lower">Lower</button>
-        <button data-v="full">Full body</button>
+      <label>1 · Where are you?</label>
+      <div class="presetgrid" id="optPreset">
+        <button data-preset="all"><span class="ic">🏟️</span>Full gym</button>
+        <button data-preset="free"><span class="ic">🏋️</span>Free weights</button>
+        <button data-preset="home"><span class="ic">💪</span>Dumbbells</button>
+        <button data-preset="body"><span class="ic">🤸</span>Bodyweight</button>
       </div>
     </div>
+
     <div class="field">
-      <label>Experience</label>
-      <div class="seg" id="optLevel">
+      <label>2 · Equipment available today <span class="muted" style="font-weight:400">(tap to toggle)</span></label>
+      <div class="tilegrid" id="optEquip"></div>
+    </div>
+
+    <div class="field">
+      <label>3 · How much time? <span class="rangeval" id="durVal">45 min</span></label>
+      <div class="row tight" id="optTime">
+        <button class="chip" data-min="20">20</button>
+        <button class="chip" data-min="30">30</button>
+        <button class="chip" data-min="45">45</button>
+        <button class="chip" data-min="60">60</button>
+        <button class="chip" data-min="75">75</button>
+      </div>
+      <input type="range" id="optDur" min="15" max="90" step="5" value="45" style="margin-top:6px" />
+    </div>
+
+    <div class="field">
+      <label>4 · Focus</label>
+      <div class="seg" id="optFocus">
+        <button data-v="full">Full body ★</button>
+        <button data-v="upper">Upper</button>
+        <button data-v="lower">Lower</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>5 · Experience &amp; goal</label>
+      <div class="seg" id="optLevel" style="margin-bottom:8px">
         <button data-v="beginner">Beginner</button>
         <button data-v="intermediate">Intermediate</button>
       </div>
-    </div>
-    <div class="field">
-      <label>Goal</label>
       <div class="seg" id="optGoal">
         <button data-v="strength">Strength</button>
         <button data-v="hypertrophy">Muscle</button>
-        <button data-v="endurance">Endurance</button>
+        <button data-v="endurance">Endur.</button>
         <button data-v="fatloss">Fat loss</button>
       </div>
     </div>
-    <div class="field">
-      <label>Session length <span class="rangeval" id="durVal">45 min</span></label>
-      <input type="range" id="optDur" min="20" max="90" step="5" value="45" />
-    </div>
-    <div class="field">
-      <label>Equipment available</label>
-      <div class="row tight" style="margin-bottom:8px">
-        <button class="chip" data-preset="all">Full gym</button>
-        <button class="chip" data-preset="home">Home (DB+body)</button>
-        <button class="chip" data-preset="body">Bodyweight</button>
-      </div>
-      <div class="row tight" id="optEquip"></div>
-    </div>
-    <button class="btn primary block" id="optApply">Apply &amp; build plan</button>
+
+    <button class="btn primary block" id="optApply">Build my plan →</button>
   </div>
 </div>
 
@@ -316,7 +352,7 @@ EXERCISES.forEach(e=>{ e.lvl = e.level==='expert' ? 'intermediate' : e.level; })
 
 /* ---------- state ---------- */
 const LS='ironpath';
-let cfg=Object.assign({focus:'upper',level:'beginner',goal:'hypertrophy',dur:45,theme:'auto',
+let cfg=Object.assign({focus:'full',level:'beginner',goal:'hypertrophy',dur:45,theme:'auto',
   equipment:['barbell','dumbbell','body only','cable','machine','kettlebells','e-z curl bar']},
   JSON.parse(localStorage.getItem(LS)||'{}'));
 if(!Array.isArray(cfg.equipment)||!cfg.equipment.length) cfg.equipment=['barbell','dumbbell','body only','cable','machine','kettlebells','e-z curl bar'];
@@ -327,6 +363,36 @@ const ORDER={upper:['Chest','Back','Shoulders','Biceps','Triceps'],
   full:['Quads','Chest','Back','Hamstrings','Shoulders','Glutes','Biceps','Triceps','Calves']};
 const SCHEMES={strength:{sets:5,reps:'4–6',rest:180},hypertrophy:{sets:4,reps:'8–12',rest:90},
   endurance:{sets:3,reps:'15–20',rest:45},fatloss:{sets:3,reps:'12–15',rest:45}};
+const EQUIP_META={
+  'barbell':{ic:'🏋️',label:'Barbell'},'dumbbell':{ic:'💪',label:'Dumbbells'},
+  'body only':{ic:'🤸',label:'Bodyweight'},'cable':{ic:'🎚️',label:'Cable'},
+  'machine':{ic:'⚙️',label:'Machines'},'kettlebells':{ic:'🔔',label:'Kettlebell'},
+  'e-z curl bar':{ic:'〰️',label:'EZ bar'}};
+const PRESETS={
+  all:[...EQUIP],
+  free:['barbell','dumbbell','e-z curl bar','kettlebells','body only'],
+  home:['dumbbell','body only'],
+  body:['body only']};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+/* ---------- warm-up & cardio generators ---------- */
+function warmupFor(focus){
+  const common='3–5 min easy cardio (brisk walk, bike, row, or jumping jacks) until you break a light sweat.';
+  const ramp='1–2 light "ramp-up" sets of your first lift (~50% weight).';
+  const up=['Arm circles — 15 each direction','Band pull-aparts or shoulder rolls — 15','Scapular push-ups — 10'];
+  const lo=['Leg swings — 12 each leg','Bodyweight squats — 15','Hip circles — 10 each way','Walking lunges — 10'];
+  let moves = focus==='upper'?up : focus==='lower'?lo : ['Arm circles — 15 each way','Bodyweight squats — 15','Leg swings — 10 each','Band pull-aparts — 15'];
+  return {lead:common, moves:[...moves, ramp]};
+}
+function cardioAdvice(goal){
+  const base={
+    fatloss:'Finish with 15–20 min moderate cardio (incline walk, bike, row) — or 6–8 rounds of 30s hard / 60s easy. Aim 3–5×/week.',
+    strength:'Keep cardio light on lifting days (5–10 min). Add 2× 20–30 min easy cardio on rest days for heart health.',
+    hypertrophy:'10–15 min moderate cardio after lifting, 2–3×/week — good for the heart without eating into gains.',
+    endurance:'Add 20–30 min steady cardio 3–4×/week, and keep rests short in the circuit above.'
+  }[goal] || 'Add 15–20 min moderate cardio a few times a week.';
+  return base+' Target ~150 min/week total (AHA guideline).';
+}
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const save=()=>localStorage.setItem(LS,JSON.stringify(cfg));
@@ -415,11 +481,13 @@ function buildPlan(){
   const perEx=sc.sets*(40+sc.rest)+50;            // rough seconds per exercise
   const budget=cfg.dur*60;
   const out=[]; let used=0;
-  // one pass: best (compound first) from each muscle group in order
+  // one pass: a (randomly chosen, compound-preferred) movement from each muscle group
   for(const g of order){
-    const cands=pool.filter(e=>e.group===g)
-      .sort((x,y)=>(x.mechanic==='compound'?0:1)-(y.mechanic==='compound'?0:1));
-    if(cands.length && used+perEx<=budget){out.push(cands[0]);used+=perEx;}
+    const cands=pool.filter(e=>e.group===g);
+    if(!cands.length || used+perEx>budget) continue;
+    const comp=cands.filter(e=>e.mechanic==='compound');
+    out.push(pick(comp.length?comp:cands));   // random pick → Shuffle visibly changes the plan
+    used+=perEx;
   }
   // second pass: add a second movement to remaining groups while time allows
   for(const g of order){
@@ -436,45 +504,61 @@ function buildPlan(){
   plan=out.map(e=>({...e,...sc}));
   renderPlan();
 }
+function warmCardHTML(){
+  const w=warmupFor(cfg.focus);
+  return `<div class="bc-head">🔥 Warm-up <span class="muted" style="font-weight:600;font-size:12px">· ~5 min, do this first</span></div>
+    <div class="lead">${w.lead}</div>
+    <ul>${w.moves.map(m=>`<li>${m}</li>`).join('')}</ul>`;
+}
+function cardioCardHTML(){
+  return `<div class="bc-head">❤️ Cardio</div><div class="lead">${cardioAdvice(cfg.goal)}</div>`;
+}
 function renderPlan(){
   const sc=SCHEMES[cfg.goal];
   $('#planSub').textContent=`${cap(cfg.focus)} · ${cap(cfg.goal)} · ${cfg.level} · ~${cfg.dur} min`;
-  if(!plan.length){$('#planList').innerHTML=`<div class="empty">No exercises match that equipment. Tap Optimize and add gear.</div>`;
+  $('#planWarm').innerHTML=warmCardHTML();
+  $('#planCardio').innerHTML=cardioCardHTML();
+  if(!plan.length){$('#planList').innerHTML=`<div class="empty">No exercises match today's equipment.<br>Tap “Today's setup” and add gear.</div>`;
     $('#planMeta').textContent='';return;}
-  $('#planList').innerHTML=plan.map(e=>{const[a]=imgs(e);
+  $('#planList').innerHTML=plan.map(e=>{const[a,b]=imgs(e);
     return `<div class="plan-item" data-id="${e.id}">
-      <img class="thumb" loading="lazy" src="${a}">
+      <img class="thumb" loading="lazy" src="${a}" onerror="this.src='${b}'">
       <div class="pi-main"><div class="pi-name">${e.name}</div>
         <div class="pi-sub" style="text-transform:capitalize">${e.group} · ${e.primary.join(', ')}</div></div>
       <div class="pi-sets">${e.sets}×${e.reps}</div></div>`;}).join('');
-  const mins=Math.round(plan.length*(sc.sets*(40+sc.rest)+50)/60);
-  $('#planMeta').innerHTML=`<b>${plan.length} exercises</b> · ${sc.sets} sets of ${sc.reps} reps · ${sc.rest}s rest · ≈ ${mins} min.  Warm up 5 min before you start.`;
+  const mins=Math.round(plan.length*(sc.sets*(40+sc.rest)+50)/60)+6;
+  $('#planMeta').innerHTML=`<b>${plan.length} exercises</b> · ${sc.sets} sets of ${sc.reps} reps · ${sc.rest}s rest · ≈ ${mins} min incl. warm-up.`;
 }
 $('#planList').onclick=e=>{const it=e.target.closest('.plan-item');if(it)openDetail(it.dataset.id);};
-$('#btnRegen').onclick=buildPlan;
-$('#btnStart').onclick=()=>{if(!plan.length)return;startWorkout();};
+$('#btnRegen').onclick=()=>{buildPlan();go('plan');};
+$('#btnStart').onclick=()=>{startWorkout();};
 
-/* ---------- OPTIMIZE SHEET ---------- */
+/* ---------- TODAY'S SETUP SHEET ---------- */
+function samePreset(a,b){return a.length===b.length && a.every(x=>b.includes(x));}
 function paintOpt(){
   $$('#optFocus button').forEach(b=>b.classList.toggle('on',b.dataset.v===cfg.focus));
   $$('#optLevel button').forEach(b=>b.classList.toggle('on',b.dataset.v===cfg.level));
   $$('#optGoal button').forEach(b=>b.classList.toggle('on',b.dataset.v===cfg.goal));
   $('#optDur').value=cfg.dur; $('#durVal').textContent=cfg.dur+' min';
-  $('#optEquip').innerHTML=EQUIP.map(eq=>
-    `<span class="chip ${cfg.equipment.includes(eq)?'on':''}" data-eq="${eq}">${eq==='body only'?'bodyweight':eq}</span>`).join('');
+  $$('#optTime .chip').forEach(b=>b.classList.toggle('on',+b.dataset.min===cfg.dur));
+  $$('#optPreset button').forEach(b=>b.classList.toggle('on',samePreset(cfg.equipment,PRESETS[b.dataset.preset]||[])));
+  $('#optEquip').innerHTML=EQUIP.map(eq=>{const m=EQUIP_META[eq];
+    return `<div class="tile ${cfg.equipment.includes(eq)?'on':''}" data-eq="${eq}"><span class="ic">${m.ic}</span>${m.label}</div>`;}).join('');
 }
 $('#btnOptimize').onclick=()=>{paintOpt();openSheet('#optBg');};
 $('#optFocus').onclick=e=>segPick(e,'focus');
 $('#optLevel').onclick=e=>segPick(e,'level');
 $('#optGoal').onclick=e=>segPick(e,'goal');
 function segPick(e,key){const b=e.target.closest('button');if(!b)return;cfg[key]=b.dataset.v;paintOpt();}
-$('#optDur').oninput=e=>{cfg.dur=+e.target.value;$('#durVal').textContent=cfg.dur+' min';};
-$('#optEquip').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;
-  const eq=c.dataset.eq; cfg.equipment.includes(eq)?cfg.equipment=cfg.equipment.filter(x=>x!==eq):cfg.equipment.push(eq);paintOpt();};
-$$('#optBg [data-preset]').forEach(b=>b.onclick=()=>{
-  cfg.equipment = b.dataset.preset==='all'?[...EQUIP]
-    : b.dataset.preset==='home'?['dumbbell','body only']:['body only'];paintOpt();});
-$('#optApply').onclick=()=>{save();updateLevelPill();renderLib();buildPlan();wkActive=false;closeSheet('#optBg');go('plan');};
+$('#optDur').oninput=e=>{cfg.dur=+e.target.value;paintOpt();};
+$('#optTime').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;cfg.dur=+c.dataset.min;paintOpt();};
+$('#optEquip').onclick=e=>{const t=e.target.closest('.tile');if(!t)return;
+  const eq=t.dataset.eq;
+  cfg.equipment = cfg.equipment.includes(eq) ? cfg.equipment.filter(x=>x!==eq) : [...cfg.equipment,eq];
+  if(!cfg.equipment.length) cfg.equipment=['body only'];
+  paintOpt();};
+$('#optPreset').onclick=e=>{const b=e.target.closest('button');if(!b)return;cfg.equipment=[...(PRESETS[b.dataset.preset]||PRESETS.all)];paintOpt();};
+$('#optApply').onclick=()=>{save();localStorage.setItem('ip_setup','1');updateLevelPill();renderLib();buildPlan();wkActive=false;closeSheet('#optBg');go('plan');};
 
 /* ---------- WORKOUT DO-ALONG (Ready → Live → Done) ---------- */
 function showWk(which){ // 'ready' | 'live' | 'done'
@@ -492,13 +576,15 @@ function renderReady(){
     $('#wkReadyList').innerHTML='<div class="empty">Tap “Change focus / level / equipment” below to build a plan.</div>';
     return;
   }
-  const sc=SCHEMES[cfg.goal];
   $('#wkReadySub').textContent=`${cap(cfg.focus)} · ${cap(cfg.goal)} · ${cfg.level} · ${plan.length} exercises · ~${cfg.dur} min`;
-  $('#wkReadyList').innerHTML=plan.map(e=>{const[a,b]=imgs(e);
+  $('#wkReadyList').innerHTML=
+    `<div class="block-card warm">${warmCardHTML()}</div>`+
+    plan.map(e=>{const[a,b]=imgs(e);
     return `<div class="plan-item" data-id="${e.id}"><img class="thumb" loading="lazy" src="${a}" onerror="this.src='${b}'">
       <div class="pi-main"><div class="pi-name">${e.name}</div>
         <div class="pi-sub" style="text-transform:capitalize">${e.group} · ${e.primary.join(', ')}</div></div>
-      <div class="pi-sets">${e.sets}×${e.reps}</div></div>`;}).join('');
+      <div class="pi-sets">${e.sets}×${e.reps}</div></div>`;}).join('')+
+    `<div class="block-card cardio">${cardioCardHTML()}</div>`;
 }
 function startWorkout(){
   if(!plan.length){paintOpt();openSheet('#optBg');return;}
@@ -625,6 +711,8 @@ startFlip();
 /* ---------- init ---------- */
 applyTheme();renderGroupChips();renderLib();buildPlan();updateLevelPill();renderReady();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* first run: greet with Today's setup so the plan matches where they actually are */
+if(!localStorage.getItem('ip_setup')){ paintOpt(); openSheet('#optBg'); }
 </script>
 </body>
 </html>
