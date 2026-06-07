@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="description" content="A free, clean, ad-free gym do-along: upper/lower body plans, target areas, animated demos and proper technique." />
 <script>try{var _c=JSON.parse(localStorage.getItem('ironpath')||'{}');document.documentElement.setAttribute('data-theme',_c.theme||'auto');}catch(e){document.documentElement.setAttribute('data-theme','auto');}</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{   /* default = dark */
     --bg:#0f1115; --bg2:#171a21; --card:#1c2029; --card2:#232834;
@@ -305,6 +306,7 @@
       <input type="file" id="logFile" accept="application/json" style="display:none">
     </div>
     <button class="btn ghost block" id="logGoogle" style="margin-top:4px">☁︎ Sync with Google (optional)</button>
+    <div class="muted" id="logSyncStatus" style="font-size:12px;text-align:center;margin-top:6px"></div>
 
     <h2 style="margin:24px 0 12px;font-size:17px">History</h2>
     <div id="logHistory"></div>
@@ -835,7 +837,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden && circ.t)
 /* ---------- TRAINING LOG ---------- */
 const LOG_KEY='ironpath_log';
 let LOG={}; try{LOG=JSON.parse(localStorage.getItem(LOG_KEY)||'{}');}catch(e){LOG={};}
-function saveLOG(){localStorage.setItem(LOG_KEY,JSON.stringify(LOG));}
+function saveLOG(){localStorage.setItem(LOG_KEY,JSON.stringify(LOG)); if(typeof gSyncDebounced==='function')gSyncDebounced();}
 function todayKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function prettyDate(k){const[y,m,d]=k.split('-').map(Number);const dt=new Date(y,m-1,d);
   return dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});}
@@ -892,15 +894,67 @@ $('#logFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new Fi
   }catch(err){alert('That file could not be read as an IronPath backup.');}};
   r.readAsText(f); e.target.value='';};
 
-/* Google sync — needs a one-time Google OAuth Client ID (free). When set, enables Drive backup. */
-const GOOGLE_CLIENT_ID=''; // <-- fill to turn on cross-device Google sync
-$('#logGoogle').onclick=()=>{
-  if(!GOOGLE_CLIENT_ID){
-    alert("Your log already saves automatically on this device — no login needed.\n\nGoogle sync (to share your log across phones/computers) needs a 1-minute one-time setup: a free Google Client ID.\n\nMeanwhile use “Backup file” to save/move your log. Ask me to “set up Google sync” and I'll switch it on.");
-    return;
+/* ---------- GOOGLE DRIVE SYNC (private appDataFolder, no backend) ---------- */
+const GOOGLE_CLIENT_ID='22210138126-pg2p9scucaeih5s9q8ge7tg8fae80s1j.apps.googleusercontent.com';
+const GSCOPE='https://www.googleapis.com/auth/drive.appdata';
+const GFILE='ironpath-log.json';
+let gToken=null,gTokenClient=null,gFileId=null,gSyncT=null,gBusy=false;
+function gStatus(t,c){const el=$('#logSyncStatus');if(el){el.textContent=t;el.style.color=c||'var(--muted)';}}
+function gInitClient(){
+  if(gTokenClient)return gTokenClient;
+  if(!(window.google&&google.accounts&&google.accounts.oauth2))return null;
+  gTokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:GOOGLE_CLIENT_ID,scope:GSCOPE,
+    callback:r=>{if(r&&r.access_token){gToken=r.access_token;localStorage.setItem('ironpath_gsync','1');$('#logGoogle').textContent='☁︎ Sync now';gSyncNow(true);}},
+    error_callback:()=>gStatus('Sign-in cancelled or blocked','')
+  });
+  return gTokenClient;
+}
+function gConnect(silent){
+  const c=gInitClient();
+  if(!c){gStatus('Google still loading — tap again in a second','');return;}
+  try{c.requestAccessToken({prompt:silent?'':'consent'});}catch(e){gStatus('Could not start Google sign-in','');}
+}
+async function gApi(url,opts){opts=opts||{};opts.headers=Object.assign({Authorization:'Bearer '+gToken},opts.headers||{});
+  const r=await fetch(url,opts);if(r.status===401){gToken=null;throw new Error('auth');}return r;}
+async function gFindFile(){const r=await gApi("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='"+GFILE+"'&fields=files(id)");
+  const j=await r.json();return (j.files&&j.files[0])?j.files[0].id:null;}
+async function gDownload(id){const r=await gApi('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media');try{return await r.json();}catch(e){return {};}}
+async function gUpload(id,content){
+  const body=JSON.stringify(content);
+  if(id){await gApi('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',{method:'PATCH',headers:{'Content-Type':'application/json'},body});}
+  else{const b='ip'+Date.now(),meta={name:GFILE,parents:['appDataFolder']};
+    const mp='--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+b+'\r\nContent-Type: application/json\r\n\r\n'+body+'\r\n--'+b+'--';
+    const r=await gApi('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+b},body:mp});
+    const j=await r.json();gFileId=j.id;}
+}
+function mergeLogs(a,b){
+  const out={},keys=new Set([...Object.keys(a||{}),...Object.keys(b||{})]);
+  for(const k of keys){const x=a&&a[k],y=b&&b[k];
+    if(!x){out[k]=y;continue;} if(!y){out[k]=x;continue;}
+    const items=[...new Set([...(x.items||[]),...(y.items||[])])];
+    const wk={};[...(x.workouts||[]),...(y.workouts||[])].forEach(w=>wk[JSON.stringify(w)]=w);
+    out[k]={notes:(x.notes||'').length>=(y.notes||'').length?x.notes:y.notes,weight:x.weight||y.weight||'',items,workouts:Object.values(wk)};
   }
-  /* GIS Drive appData flow gets wired here once GOOGLE_CLIENT_ID is set */
-};
+  return out;
+}
+async function gSyncNow(){
+  if(!gToken||gBusy)return; gBusy=true; gStatus('Syncing…','var(--accent)');
+  try{
+    if(!gFileId)gFileId=await gFindFile();
+    let remote={}; if(gFileId)remote=await gDownload(gFileId);
+    LOG=mergeLogs(remote,LOG); localStorage.setItem(LOG_KEY,JSON.stringify(LOG));
+    await gUpload(gFileId,LOG);
+    if($('#v-log').classList.contains('on'))renderLog();
+    gStatus('✓ Synced to your Google Drive','var(--accent2)');
+  }catch(e){
+    if(e.message==='auth')gStatus('Session expired — tap “Sync now” to reconnect','');
+    else gStatus('Sync error — your data is safe on this device','');
+  }finally{gBusy=false;}
+}
+function gSyncDebounced(){if(!gToken)return;clearTimeout(gSyncT);gSyncT=setTimeout(gSyncNow,1500);}
+$('#logGoogle').onclick=()=>gConnect(false);
+window.addEventListener('load',()=>{ if(localStorage.getItem('ironpath_gsync')==='1'){ $('#logGoogle').textContent='☁︎ Sync now'; setTimeout(()=>gConnect(true),1000); } });
 
 /* ---------- sheets / nav helpers ---------- */
 function openSheet(id){$(id).classList.add('open');}
