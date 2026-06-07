@@ -102,6 +102,20 @@
   .circ-controls button:active{filter:brightness(.92)}
   .circ-rest{display:flex;align-items:center;justify-content:center;height:100%;font-size:34px;font-weight:800;color:var(--accent)}
 
+  /* training log */
+  .loglbl{display:block;font-size:12px;color:var(--muted);font-weight:700;margin:10px 0 5px}
+  .loginput{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit;margin:0}
+  textarea.loginput{resize:vertical}
+  .logitem{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0;font-size:13px}
+  .logitem .x{margin-left:auto;color:var(--muted);cursor:pointer;font-weight:800;padding:0 4px}
+  .logwk{background:rgba(34,201,138,.10);border-color:var(--accent2)}
+  .logday{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;background:var(--card)}
+  .logday .ld-head{display:flex;align-items:center;justify-content:space-between;font-weight:800;font-size:14px}
+  .logday .ld-meta{color:var(--muted);font-size:12px;margin-top:2px}
+  .logday ul{margin:8px 0 0;padding-left:18px}
+  .logday li{font-size:13px;margin:2px 0}
+  .logday .ld-del{color:var(--danger);cursor:pointer;font-size:12px;font-weight:700;background:none;border:0}
+
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:.15s}
   .card:active{transform:scale(.985)}
@@ -264,6 +278,37 @@
       <button class="btn green block" id="btnFinish">Done</button>
     </div>
   </section>
+
+  <!-- ============ LOG / TRACKER ============ -->
+  <section class="view" id="v-log">
+    <h2>Training Log</h2>
+    <div class="sub">Auto-saved on this device. Finished workouts log themselves. Back it up anytime.</div>
+
+    <div class="block-card">
+      <div class="bc-head">📅 <span id="logTodayDate"></span></div>
+      <label class="loglbl">Bodyweight (optional)</label>
+      <input id="logWeight" class="loginput" type="number" inputmode="decimal" placeholder="e.g., 180 lb">
+      <label class="loglbl">Notes</label>
+      <textarea id="logNotes" class="loginput" rows="3" placeholder="Energy, soreness, PRs, how it felt…"></textarea>
+      <label class="loglbl">Today's activity</label>
+      <div id="logTodayItems"></div>
+      <div class="row tight" style="margin-top:8px">
+        <input id="logAddInput" class="loginput" style="flex:1;margin:0" placeholder="e.g., 20 min walk, 100 pushups">
+        <button class="btn ghost" id="logAdd" style="padding:11px 16px">Add</button>
+      </div>
+      <div class="muted" id="logSaved" style="font-size:11px;margin-top:8px;height:14px"></div>
+    </div>
+
+    <div class="row tight">
+      <button class="btn ghost" id="logExport">⬇ Backup file</button>
+      <button class="btn ghost" id="logImport">⬆ Restore</button>
+      <input type="file" id="logFile" accept="application/json" style="display:none">
+    </div>
+    <button class="btn ghost block" id="logGoogle" style="margin-top:4px">☁︎ Sync with Google (optional)</button>
+
+    <h2 style="margin:24px 0 12px;font-size:17px">History</h2>
+    <div id="logHistory"></div>
+  </section>
 </main>
 
 <!-- rest timer overlay -->
@@ -378,6 +423,10 @@
   <button data-v="workout">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5l11 11M21 21l-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 18l3 3 3-3-3-3zM18 9l3-3-3-3-3 3z"/></svg>
     Workout
+  </button>
+  <button data-v="log">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13l3 3v13a0 0 0 0 1 0 0H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+    Log
   </button>
 </nav>
 
@@ -672,7 +721,8 @@ $('#btnRest').onclick=()=>{if(plan[wkIndex])openRest(plan[wkIndex].rest);};
 function finishWk(){
   stopRest(); $('#wkBar').style.width='100%';
   const sets=Object.values(wkState).reduce((n,a)=>n+a.filter(Boolean).length,0);
-  $('#doneSummary').textContent=`${plan.length} exercises · ${sets} sets logged. Nice work — recover well.`;
+  logWorkout();                       // auto-save this session to the training log
+  $('#doneSummary').textContent=`${plan.length} exercises · ${sets} sets logged · saved to your Log ✓. Recover well!`;
   wkActive=false; showWk('done');
 }
 $('#btnFinish').onclick=()=>{ go('plan'); };
@@ -782,6 +832,76 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('visibilitychange',()=>{ if(document.hidden && circ.t){circ.paused=true;$('#circPause').textContent='▶';} });
 
+/* ---------- TRAINING LOG ---------- */
+const LOG_KEY='ironpath_log';
+let LOG={}; try{LOG=JSON.parse(localStorage.getItem(LOG_KEY)||'{}');}catch(e){LOG={};}
+function saveLOG(){localStorage.setItem(LOG_KEY,JSON.stringify(LOG));}
+function todayKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function prettyDate(k){const[y,m,d]=k.split('-').map(Number);const dt=new Date(y,m-1,d);
+  return dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});}
+function dayObj(k){ if(!LOG[k]) LOG[k]={notes:'',weight:'',items:[],workouts:[]}; return LOG[k]; }
+function logWorkout(){
+  const ex=plan.map((e,i)=>({name:e.name,sets:(wkState[i]||[]).filter(Boolean).length,target:e.sets}));
+  const setsLogged=ex.reduce((n,x)=>n+x.sets,0);
+  const t=dayObj(todayKey());
+  t.workouts.push({time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+    focus:cfg.focus,goal:cfg.goal,level:cfg.level,exercises:ex,setsLogged});
+  saveLOG();
+}
+let _logTimer=null;
+function flashSaved(){const el=$('#logSaved');el.textContent='✓ Saved';clearTimeout(_logTimer);_logTimer=setTimeout(()=>el.textContent='',1500);}
+function renderLog(){
+  const k=todayKey(), t=dayObj(k);
+  $('#logTodayDate').textContent=prettyDate(k);
+  if(document.activeElement!==$('#logWeight')) $('#logWeight').value=t.weight||'';
+  if(document.activeElement!==$('#logNotes'))  $('#logNotes').value =t.notes||'';
+  // today's items + auto-logged workouts
+  let html=t.workouts.map((w,i)=>`<div class="logitem logwk"><span>🏋️ ${w.time} · ${cap(w.focus)} ${cap(w.goal)} · ${w.setsLogged} sets${w.exercises.length?' · '+w.exercises.length+' exercises':''}</span><span class="x" data-wk="${i}">✕</span></div>`).join('');
+  html+=t.items.map((it,i)=>`<div class="logitem"><span>• ${it}</span><span class="x" data-item="${i}">✕</span></div>`).join('');
+  $('#logTodayItems').innerHTML=html||'<div class="muted" style="font-size:12px">Nothing logged yet today.</div>';
+  // history (past days, newest first, excluding today)
+  const keys=Object.keys(LOG).filter(x=>x!==k).sort().reverse();
+  $('#logHistory').innerHTML = keys.length ? keys.map(dk=>{
+    const d=LOG[dk]; const items=[...d.workouts.map(w=>`🏋️ ${cap(w.focus)} ${cap(w.goal)} — ${w.setsLogged} sets`),...d.items.map(x=>'• '+x)];
+    return `<div class="logday"><div class="ld-head"><span>${prettyDate(dk)}</span><button class="ld-del" data-del="${dk}">delete</button></div>
+      ${d.weight?`<div class="ld-meta">Weight: ${d.weight} lb</div>`:''}
+      ${items.length?`<ul>${items.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
+      ${d.notes?`<div class="ld-meta" style="margin-top:6px">📝 ${d.notes}</div>`:''}</div>`;
+  }).join('') : '<div class="empty">No past entries yet. Your finished workouts will appear here.</div>';
+}
+$('#logWeight').oninput=e=>{dayObj(todayKey()).weight=e.target.value;saveLOG();flashSaved();};
+$('#logNotes').oninput =e=>{dayObj(todayKey()).notes =e.target.value;saveLOG();flashSaved();};
+$('#logAdd').onclick=()=>{const v=$('#logAddInput').value.trim();if(!v)return;dayObj(todayKey()).items.push(v);$('#logAddInput').value='';saveLOG();renderLog();flashSaved();};
+$('#logAddInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('#logAdd').click();});
+$('#logTodayItems').onclick=e=>{const x=e.target.closest('.x');if(!x)return;const t=dayObj(todayKey());
+  if(x.dataset.wk!=null)t.workouts.splice(+x.dataset.wk,1); else if(x.dataset.item!=null)t.items.splice(+x.dataset.item,1);
+  saveLOG();renderLog();};
+$('#logHistory').onclick=e=>{const b=e.target.closest('[data-del]');if(!b)return;
+  if(confirm('Delete '+prettyDate(b.dataset.del)+' from your log?')){delete LOG[b.dataset.del];saveLOG();renderLog();}};
+$('#logExport').onclick=()=>{
+  const blob=new Blob([JSON.stringify(LOG,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='ironpath-log-'+todayKey()+'.json';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+$('#logImport').onclick=()=>$('#logFile').click();
+$('#logFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const data=JSON.parse(r.result);if(typeof data!=='object')throw 0;
+    Object.keys(data).forEach(k=>{LOG[k]=data[k];}); saveLOG(); renderLog();
+    alert('Restored '+Object.keys(data).length+' day(s) into your log.');
+  }catch(err){alert('That file could not be read as an IronPath backup.');}};
+  r.readAsText(f); e.target.value='';};
+
+/* Google sync — needs a one-time Google OAuth Client ID (free). When set, enables Drive backup. */
+const GOOGLE_CLIENT_ID=''; // <-- fill to turn on cross-device Google sync
+$('#logGoogle').onclick=()=>{
+  if(!GOOGLE_CLIENT_ID){
+    alert("Your log already saves automatically on this device — no login needed.\n\nGoogle sync (to share your log across phones/computers) needs a 1-minute one-time setup: a free Google Client ID.\n\nMeanwhile use “Backup file” to save/move your log. Ask me to “set up Google sync” and I'll switch it on.");
+    return;
+  }
+  /* GIS Drive appData flow gets wired here once GOOGLE_CLIENT_ID is set */
+};
+
 /* ---------- sheets / nav helpers ---------- */
 function openSheet(id){$(id).classList.add('open');}
 function closeSheet(id){$(id).classList.remove('open');}
@@ -793,6 +913,7 @@ function go(v){
   if(v!=='workout') stopRest();
   if(v==='workout') refreshWorkoutView();
   if(v==='plan') renderPlan();
+  if(v==='log') renderLog();
   window.scrollTo(0,0);
 }
 $('#tabs').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v);};

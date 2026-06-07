@@ -2,8 +2,8 @@
    - App shell (HTML/JS/manifest): NETWORK-FIRST so updates always show when online,
      falling back to cache when offline. Fixes "app not refreshing / glitchy".
    - Exercise images: CACHE-FIRST (they never change), only caching successful responses. */
-const SHELL = 'ironpath-shell-v8';
-const IMG   = 'ironpath-img-v8';
+const SHELL = 'ironpath-shell-v9';
+const IMG   = 'ironpath-img-v9';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', e => {
