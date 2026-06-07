@@ -86,6 +86,22 @@
   .block-card li{font-size:13px;color:var(--muted);margin:3px 0}
   .block-card .lead{font-size:13px;color:var(--muted)}
 
+  /* guided circuit player */
+  .circuit-bg{position:fixed;inset:0;z-index:60;background:var(--bg);display:none;overflow:auto}
+  .circuit-bg.open{display:block}
+  .circuit{max-width:600px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top)) 16px 24px}
+  .circ-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  #circTitle{font-weight:800;font-size:18px}
+  #circStop{background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:7px 14px;font-weight:700;cursor:pointer}
+  .circ-timer{font-variant-numeric:tabular-nums;font-size:72px;font-weight:800;text-align:center;letter-spacing:-2px;line-height:1.05;margin:10px 0 2px}
+  .circuit-bg.rest .circ-timer{color:var(--accent)}
+  .circuit-bg.work .circ-timer{color:var(--accent2)}
+  .circ-controls{display:flex;gap:12px;justify-content:center;align-items:center;margin-top:18px}
+  .circ-controls button{width:64px;height:64px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .circ-controls button.big{width:80px;height:80px;font-size:30px;background:var(--accent);color:#fff;border:0}
+  .circ-controls button:active{filter:brightness(.92)}
+  .circ-rest{display:flex;align-items:center;justify-content:center;height:100%;font-size:34px;font-weight:800;color:var(--accent)}
+
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:.15s}
   .card:active{transform:scale(.985)}
@@ -260,6 +276,27 @@
       <button class="chip" data-adj="15">+15s</button>
     </div>
     <button class="btn primary block" id="restSkip" style="margin-top:14px">Skip rest</button>
+  </div>
+</div>
+
+<!-- guided circuit player (warm-up / cardio) -->
+<div class="circuit-bg" id="circuitBg">
+  <div class="circuit" id="circuitInner">
+    <div class="circ-top">
+      <span id="circTitle">Warm-up</span>
+      <button id="circStop">✕ Stop</button>
+    </div>
+    <div class="progress"><span id="circBar"></span></div>
+    <div class="muted" id="circCount" style="font-size:13px;margin:6px 0"></div>
+    <h2 id="circName" style="margin:2px 0 12px"></h2>
+    <div class="wk-demo" id="circDemo" style="max-height:40vh"></div>
+    <div class="circ-timer" id="circClock">0:40</div>
+    <div class="muted" id="circNext" style="text-align:center;min-height:18px"></div>
+    <div class="circ-controls">
+      <button id="circPrev" title="Previous">⏮</button>
+      <button id="circPause" class="big" title="Pause/Resume">⏸</button>
+      <button id="circSkip" title="Skip">⏭</button>
+    </div>
   </div>
 </div>
 
@@ -517,10 +554,12 @@ function warmCardHTML(){
   const w=warmupFor(cfg.focus);
   return `<div class="bc-head">🔥 Warm-up <span class="muted" style="font-weight:600;font-size:12px">· ~5 min, do this first</span></div>
     <div class="lead">${w.lead}</div>
-    <ul>${w.moves.map(m=>`<li>${m}</li>`).join('')}</ul>`;
+    <ul>${w.moves.map(m=>`<li>${m}</li>`).join('')}</ul>
+    <button class="btn green block start-warm" style="margin-top:10px">▶ Start guided warm-up</button>`;
 }
 function cardioCardHTML(){
-  return `<div class="bc-head">❤️ Cardio</div><div class="lead">${cardioAdvice(cfg.goal)}</div>`;
+  return `<div class="bc-head">❤️ Cardio</div><div class="lead">${cardioAdvice(cfg.goal)}</div>
+    <button class="btn ghost block start-cardio" style="margin-top:10px">▶ Start guided cardio</button>`;
 }
 function renderPlan(){
   const sc=SCHEMES[cfg.goal];
@@ -658,6 +697,88 @@ function beep(){try{unlockAudio();if(!AC)return;
   o.frequency.value=880;o.start();g.gain.setValueAtTime(.25,AC.currentTime);
   g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+.6);o.stop(AC.currentTime+.6);}catch(e){}}
 function vib(){try{if(navigator.vibrate)navigator.vibrate([200,80,200]);}catch(e){}}
+
+/* ---------- GUIDED CIRCUIT PLAYER (warm-up / cardio) ---------- */
+const WC={Arm_Circles:'Arm Circles',Bodyweight_Squat:'Bodyweight Squat',Mountain_Climbers:'Mountain Climbers',
+  Inchworm:'Inchworm',Double_Leg_Butt_Kick:'Butt Kicks',Knee_Circles:'Knee Circles',
+  Dynamic_Chest_Stretch:'Dynamic Chest Stretch',Band_Pull_Apart:'Band Pull-Apart',Cat_Stretch:'Cat Stretch',
+  Freehand_Jump_Squat:'Jump Squats',Knee_Tuck_Jump:'Knee Tuck Jumps',Fast_Skipping:'High Knees / Skipping',Rope_Jumping:'Rope Jumping'};
+const imgsId=id=>[CDN+id+'/0.jpg',CDN+id+'/1.jpg'];
+const WARM_POOL={
+  upper:['Arm_Circles','Dynamic_Chest_Stretch','Band_Pull_Apart','Mountain_Climbers','Inchworm'],
+  lower:['Bodyweight_Squat','Knee_Circles','Double_Leg_Butt_Kick','Mountain_Climbers','Inchworm'],
+  full :['Arm_Circles','Bodyweight_Squat','Mountain_Climbers','Inchworm','Double_Leg_Butt_Kick']};
+const CARDIO_MOVES=['Mountain_Climbers','Freehand_Jump_Squat','Double_Leg_Butt_Kick','Knee_Tuck_Jump','Fast_Skipping'];
+function warmupSegs(){
+  const ids=WARM_POOL[cfg.focus]||WARM_POOL.full;
+  return ids.map(id=>({kind:'work',id,name:WC[id],sec:40}));
+}
+function cardioSegs(){
+  const rounds=(cfg.goal==='fatloss'||cfg.goal==='endurance')?3:2;
+  const segs=[];
+  for(let r=0;r<rounds;r++) CARDIO_MOVES.forEach(id=>{
+    segs.push({kind:'work',id,name:WC[id],sec:40,round:r+1,rounds});
+    segs.push({kind:'rest',name:'Rest',sec:20});
+  });
+  segs.pop(); // drop trailing rest
+  return segs;
+}
+
+let circ={segs:[],i:0,left:0,t:null,paused:false};
+function startCircuit(title,segs){
+  if(!segs.length)return;
+  unlockAudio();
+  circ={segs,i:0,left:segs[0].sec,t:null,paused:false};
+  $('#circTitle').textContent=title;
+  $('#circuitBg').classList.add('open');
+  renderCirc();
+  circ.t=setInterval(circTick,1000);
+}
+function circTick(){
+  if(circ.paused)return;
+  circ.left--;
+  if(circ.left<=0){ beep(); vib(); advanceCirc(1); }
+  else paintCircTime();
+}
+function advanceCirc(dir){
+  const n=circ.i+dir;
+  if(n>=circ.segs.length){ endCircuit(); return; }
+  circ.i=Math.max(0,n); circ.left=circ.segs[circ.i].sec; renderCirc();
+}
+function endCircuit(){ beep(); $('#circName').textContent='Done! 🎉'; setTimeout(stopCircuit,800); }
+function stopCircuit(){ if(circ.t){clearInterval(circ.t);circ.t=null;} $('#circuitBg').classList.remove('open'); }
+function paintCircTime(){const s=Math.max(circ.left,0);$('#circClock').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function renderCirc(){
+  const s=circ.segs[circ.i], bg=$('#circuitBg');
+  bg.classList.toggle('rest',s.kind==='rest'); bg.classList.toggle('work',s.kind==='work');
+  $('#circBar').style.width=(circ.i/circ.segs.length*100)+'%';
+  const work=circ.segs.filter(x=>x.kind==='work');
+  const wIdx=circ.segs.slice(0,circ.i+1).filter(x=>x.kind==='work').length;
+  if(s.kind==='rest'){
+    const nx=circ.segs[circ.i+1];
+    $('#circCount').textContent='Rest';
+    $('#circName').textContent='Rest';
+    $('#circDemo').innerHTML=`<div class="circ-rest">😮‍💨 Breathe</div>`;
+    $('#circNext').textContent = nx ? 'Up next: '+nx.name : '';
+  }else{
+    const[a,b]=imgsId(s.id);
+    $('#circCount').textContent=`Move ${wIdx} of ${work.length}`+(s.round?` · Round ${s.round}/${s.rounds}`:'');
+    $('#circName').textContent=s.name;
+    $('#circDemo').innerHTML=`<img class="f0" decoding="async" src="${a}" onerror="this.onerror=null;this.src='${b}'"><img class="f1" decoding="async" src="${b}" onerror="this.onerror=null;this.style.display='none'">`;
+    const nx=circ.segs[circ.i+1];
+    $('#circNext').textContent = nx ? (nx.kind==='rest'?'Then: rest':'Up next: '+nx.name) : 'Last one!';
+  }
+  paintCircTime();
+}
+$('#circStop').onclick=stopCircuit;
+$('#circSkip').onclick=()=>advanceCirc(1);
+$('#circPrev').onclick=()=>advanceCirc(-1);
+$('#circPause').onclick=()=>{circ.paused=!circ.paused;$('#circPause').textContent=circ.paused?'▶':'⏸';};
+document.addEventListener('click',e=>{
+  if(e.target.closest('.start-warm')) startCircuit('Warm-up',warmupSegs());
+  else if(e.target.closest('.start-cardio')) startCircuit('Cardio',cardioSegs());
+});
+document.addEventListener('visibilitychange',()=>{ if(document.hidden && circ.t){circ.paused=true;$('#circPause').textContent='▶';} });
 
 /* ---------- sheets / nav helpers ---------- */
 function openSheet(id){$(id).classList.add('open');}
