@@ -389,10 +389,12 @@ EXERCISES.forEach(e=>{ e.lvl = e.level==='expert' ? 'intermediate' : e.level; })
 
 /* ---------- state ---------- */
 const LS='ironpath';
-let cfg=Object.assign({focus:'full',level:'beginner',goal:'hypertrophy',dur:45,theme:'auto',
-  equipment:['barbell','dumbbell','body only','cable','machine','kettlebells','e-z curl bar']},
+let cfg=Object.assign({focus:'full',level:'beginner',goal:'fatloss',dur:30,theme:'auto',
+  equipment:['dumbbell','body only']},
   JSON.parse(localStorage.getItem(LS)||'{}'));
-if(!Array.isArray(cfg.equipment)||!cfg.equipment.length) cfg.equipment=['barbell','dumbbell','body only','cable','machine','kettlebells','e-z curl bar'];
+if(!Array.isArray(cfg.equipment)||!cfg.equipment.length) cfg.equipment=['dumbbell','body only'];
+/* one-time migration: apply the requested defaults (dumbbells + bodyweight, 30 min, fat loss) */
+if(cfg.defaultsV!==2){ cfg.goal='fatloss'; cfg.dur=30; cfg.equipment=['dumbbell','body only']; cfg.defaultsV=2; localStorage.setItem(LS,JSON.stringify(cfg)); }
 let plan=[]; let wkIndex=0; let wkState={}; let wkActive=false;
 const EQUIP=['barbell','dumbbell','body only','cable','machine','kettlebells','e-z curl bar'];
 const ORDER={upper:['Chest','Back','Shoulders','Biceps','Triceps'],
