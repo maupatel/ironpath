@@ -91,11 +91,11 @@
   .card:active{transform:scale(.985)}
   .demo{position:relative;width:100%;aspect-ratio:1/1;background:var(--card2);overflow:hidden}
   .demo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .35s ease}
-  /* two-frame demo loop: f0 = start, f1 = finish; body.flip alternates them in sync */
+  /* two-frame demo loop: f0 (start) ALWAYS visible underneath; f1 (finish) fades in on top.
+     If f1 hasn't loaded yet it's just transparent, so f0 shows through — no blank flicker. */
   .demo .f0,.wk-demo .f0{opacity:1}
-  .demo .f1,.wk-demo .f1{opacity:0}
+  .demo .f1,.wk-demo .f1{opacity:0;will-change:opacity}
   body.flip .demo .f1,body.flip .wk-demo .f1{opacity:1}
-  body.flip .demo .f0,body.flip .wk-demo .f0{opacity:0}
   .demo .badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:999px;text-transform:capitalize;letter-spacing:.3px}
   .card .meta{padding:10px 11px}
   .card .nm{font-weight:700;font-size:13.5px;line-height:1.25}
@@ -397,6 +397,15 @@ function cardioAdvice(goal){
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const save=()=>localStorage.setItem(LS,JSON.stringify(cfg));
 const imgs=e=>e.images.map(i=>CDN+i);
+/* non-redundant muscle subtitle: "Quads", "Chest", "Back · Middle Back" (never "Chest · Chest") */
+function subLabel(e){
+  const g=cap(e.group);
+  const extra=[...new Set(e.primary.map(cap))].filter(m=>{
+    const a=m.toLowerCase(), b=g.toLowerCase();
+    return a!==b && !a.startsWith(b.slice(0,4)) && !b.startsWith(a.slice(0,4));
+  });
+  return extra.length ? g+' · '+extra.join(', ') : g;
+}
 
 /* ---------- BROWSE ---------- */
 let curRegion='all', curGroup='all';
@@ -419,9 +428,9 @@ function renderLib(){
   grid.innerHTML=list.map(e=>{
     const[a,b]=imgs(e);
     return `<div class="card" data-id="${e.id}">
-      <div class="demo"><img class="f0" loading="lazy" src="${a}" alt="" onerror="this.src='${b}'"><img class="f1" loading="lazy" src="${b}" alt="" onerror="this.src='${a}'">
+      <div class="demo"><img class="f0" loading="lazy" decoding="async" src="${a}" alt="" onerror="this.onerror=null;this.src='${b}'"><img class="f1" loading="lazy" decoding="async" src="${b}" alt="" onerror="this.onerror=null;this.style.display='none'">
       <span class="badge">${e.lvl}</span></div>
-      <div class="meta"><div class="nm">${e.name}</div><div class="tg">${e.primary.join(', ')}</div></div></div>`;
+      <div class="meta"><div class="nm">${e.name}</div><div class="tg">${e.primary.map(cap).join(', ')}</div></div></div>`;
   }).join('');
 }
 $('#regionSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;
@@ -457,7 +466,7 @@ function weightTip(e){
 function openDetail(id){
   const e=EXERCISES.find(x=>x.id===id);if(!e)return;const[a,b]=imgs(e);
   $('#detailSheet').innerHTML=`<div class="grip"></div>
-    <div class="wk-demo" style="max-height:38vh"><img class="f0" src="${a}" onerror="this.src='${b}'"><img class="f1" src="${b}" onerror="this.src='${a}'"></div>
+    <div class="wk-demo" style="max-height:38vh"><img class="f0" decoding="async" src="${a}" onerror="this.onerror=null;this.src='${b}'"><img class="f1" decoding="async" src="${b}" onerror="this.onerror=null;this.style.display='none'"></div>
     <h3>${e.name}</h3>
     <div class="muted" style="font-size:13px;text-transform:capitalize">${e.equipment} · ${e.lvl} · ${e.mechanic}</div>
     <div class="tags">
@@ -522,9 +531,9 @@ function renderPlan(){
     $('#planMeta').textContent='';return;}
   $('#planList').innerHTML=plan.map(e=>{const[a,b]=imgs(e);
     return `<div class="plan-item" data-id="${e.id}">
-      <img class="thumb" loading="lazy" src="${a}" onerror="this.src='${b}'">
+      <img class="thumb" loading="lazy" decoding="async" src="${a}" onerror="this.onerror=null;this.src='${b}'">
       <div class="pi-main"><div class="pi-name">${e.name}</div>
-        <div class="pi-sub" style="text-transform:capitalize">${e.group} · ${e.primary.join(', ')}</div></div>
+        <div class="pi-sub">${subLabel(e)}</div></div>
       <div class="pi-sets">${e.sets}×${e.reps}</div></div>`;}).join('');
   const mins=Math.round(plan.length*(sc.sets*(40+sc.rest)+50)/60)+6;
   $('#planMeta').innerHTML=`<b>${plan.length} exercises</b> · ${sc.sets} sets of ${sc.reps} reps · ${sc.rest}s rest · ≈ ${mins} min incl. warm-up.`;
@@ -580,15 +589,15 @@ function renderReady(){
   $('#wkReadyList').innerHTML=
     `<div class="block-card warm">${warmCardHTML()}</div>`+
     plan.map(e=>{const[a,b]=imgs(e);
-    return `<div class="plan-item" data-id="${e.id}"><img class="thumb" loading="lazy" src="${a}" onerror="this.src='${b}'">
+    return `<div class="plan-item" data-id="${e.id}"><img class="thumb" loading="lazy" decoding="async" src="${a}" onerror="this.onerror=null;this.src='${b}'">
       <div class="pi-main"><div class="pi-name">${e.name}</div>
-        <div class="pi-sub" style="text-transform:capitalize">${e.group} · ${e.primary.join(', ')}</div></div>
+        <div class="pi-sub">${subLabel(e)}</div></div>
       <div class="pi-sets">${e.sets}×${e.reps}</div></div>`;}).join('')+
     `<div class="block-card cardio">${cardioCardHTML()}</div>`;
 }
 function startWorkout(){
   if(!plan.length){paintOpt();openSheet('#optBg');return;}
-  wkActive=true; wkIndex=0; wkState={};
+  stopRest(); wkActive=true; wkIndex=0; wkState={};
   plan.forEach((e,i)=>wkState[i]=new Array(e.sets).fill(false));
   go('workout');                          // go() will call refreshWorkoutView → live
 }
@@ -599,7 +608,7 @@ function renderWk(){
   $('#wkCount').textContent=`Exercise ${wkIndex+1} of ${plan.length} · ${e.group}`;
   $('#wkBar').style.width=(wkIndex/plan.length*100)+'%';
   $('#wkName').textContent=e.name;
-  $('#wkDemo').innerHTML=`<img class="f0" src="${a}" onerror="this.src='${b}'"><img class="f1" src="${b}" onerror="this.src='${a}'">`;
+  $('#wkDemo').innerHTML=`<img class="f0" decoding="async" src="${a}" onerror="this.onerror=null;this.src='${b}'"><img class="f1" decoding="async" src="${b}" onerror="this.onerror=null;this.style.display='none'">`;
   $('#wkTags').innerHTML=e.primary.map(m=>`<span class="tag prim">🎯 ${m}</span>`).join('')
     +e.secondary.slice(0,3).map(m=>`<span class="tag">${m}</span>`).join('');
   $('#wkScheme').textContent=`${e.sets} sets × ${e.reps} reps · ${e.rest}s rest`;
@@ -616,11 +625,11 @@ $('#wkSets').onclick=e=>{const b=e.target.closest('.setbtn');if(!b||!plan[wkInde
   const i=+b.dataset.set; wkState[wkIndex][i]=!wkState[wkIndex][i];
   renderWk(); if(wkState[wkIndex][i] && wkIndex<plan.length) openRest(plan[wkIndex].rest);};
 $('#btnHow').onclick=()=>{if(plan[wkIndex])openDetail(plan[wkIndex].id);};
-$('#btnPrev').onclick=()=>{if(wkIndex>0){wkIndex--;renderWk();}};
-$('#btnNext').onclick=()=>{if(wkIndex<plan.length-1){wkIndex++;renderWk();}else finishWk();};
+$('#btnPrev').onclick=()=>{stopRest();if(wkIndex>0){wkIndex--;renderWk();}};
+$('#btnNext').onclick=()=>{stopRest();if(wkIndex<plan.length-1){wkIndex++;renderWk();}else finishWk();};
 $('#btnRest').onclick=()=>{if(plan[wkIndex])openRest(plan[wkIndex].rest);};
 function finishWk(){
-  $('#wkBar').style.width='100%';
+  stopRest(); $('#wkBar').style.width='100%';
   const sets=Object.values(wkState).reduce((n,a)=>n+a.filter(Boolean).length,0);
   $('#doneSummary').textContent=`${plan.length} exercises · ${sets} sets logged. Nice work — recover well.`;
   wkActive=false; showWk('done');
@@ -631,10 +640,11 @@ $('#btnFinish').onclick=()=>{ go('plan'); };
 let restT=null, restLeft=0;
 function openRest(sec){restLeft=sec;paintRest();openSheet('#restBg');
   clearInterval(restT);restT=setInterval(()=>{restLeft--;paintRest();
-    if(restLeft<=0){clearInterval(restT);beep();vib();closeSheet('#restBg');}},1000);}
+    if(restLeft<=0){clearInterval(restT);restT=null;beep();vib();closeSheet('#restBg');}},1000);}
+function stopRest(){ if(restT){clearInterval(restT);restT=null;} closeSheet('#restBg'); }
 function paintRest(){const m=Math.floor(Math.max(restLeft,0)/60),s=Math.max(restLeft,0)%60;
   $('#restClock').textContent=m+':'+String(s).padStart(2,'0');}
-$('#restSkip').onclick=()=>{clearInterval(restT);closeSheet('#restBg');};
+$('#restSkip').onclick=stopRest;
 $$('#restBg [data-adj]').forEach(b=>b.onclick=()=>{restLeft=Math.max(5,restLeft+ +b.dataset.adj);paintRest();});
 /* iOS needs the AudioContext created & resumed during a user gesture, or later beeps are silent.
    Unlock a single shared context on first tap so the rest-timer beep works on iPhone. */
@@ -657,6 +667,7 @@ function go(v){
   const sec=$('#v-'+v); if(!sec) return;
   $$('.view').forEach(x=>x.classList.remove('on')); sec.classList.add('on');
   $$('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  if(v!=='workout') stopRest();
   if(v==='workout') refreshWorkoutView();
   if(v==='plan') renderPlan();
   window.scrollTo(0,0);
