@@ -1,4 +1,8 @@
-# IronPath — Gym Do-Along
+# IronPath: Gym Do-Along
+
+![License](https://img.shields.io/github/license/maupatel/ironpath)
+![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8)
+![No ads](https://img.shields.io/badge/ads-none-success)
 
 A free, clean, **ad-free** workout app + printable PDF. No accounts, no tracking, no bloat.
 
